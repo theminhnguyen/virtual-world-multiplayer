@@ -4,7 +4,7 @@ const path = require('path');
 const { Server } = require('socket.io');
 
 const PORT = process.env.PORT || 3000;
-const MAX_PLAYERS = 20;
+const MAX_PLAYERS = 50;
 
 // ===================== STATE =====================
 const players = new Map(); // socketId -> playerData
@@ -62,7 +62,16 @@ const server = http.createServer((req, res) => {
       res.writeHead(404);
       res.end('Not found');
     } else {
-      res.writeHead(200, { 'Content-Type': contentType });
+      // Kein Caching für HTML/JS: Deployments sollen sofort beim User landen,
+      // ohne dass er Cmd+Shift+R drücken muss.
+      const noCache = ext === '.html' || ext === '.js';
+      const headers = { 'Content-Type': contentType };
+      if (noCache) {
+        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+        headers['Pragma'] = 'no-cache';
+        headers['Expires'] = '0';
+      }
+      res.writeHead(200, headers);
       res.end(content);
     }
   });
@@ -82,10 +91,13 @@ io.on('connection', (socket) => {
 
   // Player joins
   socket.on('join', (data) => {
+    // Name trimmen und Fallback auf 'Spieler' wenn leer/whitespace
+    const rawName = (typeof data?.name === 'string' ? data.name : '').trim();
+    const name = (rawName.slice(0, 16)) || 'Spieler';
     const playerData = {
       id: socket.id,
-      name: data.name.slice(0, 16) || 'Spieler',
-      color: data.color || '#3b82f6',
+      name,
+      color: data?.color || '#3b82f6',
       x: 1500, y: 1000, dir: 0, frame: 0, moving: false,
       speechText: '', speechTimer: 0, tagged: false,
     };
@@ -118,10 +130,18 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('player-moved', { id: socket.id, x: p.x, y: p.y, dir: p.dir, frame: p.frame, moving: p.moving });
   });
 
-  // Chat
+  // Chat mit simpler Rate-Limitierung: max 5 Nachrichten in 3 Sekunden pro Socket
+  socket._chatTimes = [];
   socket.on('chat', (text) => {
     const p = players.get(socket.id);
-    if (!p) return;
+    if (!p || typeof text !== 'string') return;
+    const now = Date.now();
+    socket._chatTimes = socket._chatTimes.filter(t => now - t < 3000);
+    if (socket._chatTimes.length >= 5) {
+      socket.emit('chat', { name: 'System', color: '', text: '⚠️ Bitte nicht spammen (max 5 Nachrichten / 3 Sek).', system: true });
+      return;
+    }
+    socket._chatTimes.push(now);
     text = text.slice(0, 200);
     p.speechText = text; p.speechTimer = 4000;
     io.emit('chat', { name: p.name, color: p.color, text, system: false });
@@ -158,13 +178,34 @@ io.on('connection', (socket) => {
   // Tag collision
   socket.on('tag-player', (targetId) => {
     if (!activeGame || activeGame.type !== 'tag') return;
+    // Nur der aktuelle Tagger darf tagen
+    if (activeGame.tagger && activeGame.tagger !== socket.id) return;
     const target = players.get(targetId);
-    if (target && !target.tagged) {
+    // Mid-Game-Joiner sind keine Teilnehmer → nicht taggbar
+    const isParticipant = !activeGame.participants || activeGame.participants.has(targetId);
+    if (target && !target.tagged && targetId !== socket.id && isParticipant) {
       target.tagged = true;
       activeGame.scores[socket.id] = (activeGame.scores[socket.id] || 0) + 1;
       io.emit('player-tagged', { taggerId: socket.id, targetId });
       const tagger = players.get(socket.id);
       io.emit('chat', { name: 'System', color: '', text: `${tagger?.name || '?'} hat ${target.name} gefangen!`, system: true });
+      // Auto-End: wenn alle Teilnehmer (außer Tagger) gefangen sind.
+      // Mid-Game-Joiner zählen nicht — sie sind nicht taggbar.
+      const nonTaggers = Array.from(players.values()).filter(p =>
+        p.id !== activeGame.tagger &&
+        (!activeGame.participants || activeGame.participants.has(p.id))
+      );
+      if (nonTaggers.length > 0 && nonTaggers.every(p => p.tagged)) {
+        io.emit('chat', { name: 'System', color: '', text: '🎯 Alle gefangen! Spiel beendet.', system: true });
+        io.emit('game-ended', {
+          game: activeGame,
+          scores: activeGame.scores,
+          leaderboard: buildLeaderboard(activeGame),
+          abResults: buildABResults(activeGame),
+        });
+        activeGame = null; gameItems = []; abZones = null; raceGoal = null;
+        players.forEach(p => p.tagged = false);
+      }
     }
   });
 
@@ -237,6 +278,39 @@ io.on('connection', (socket) => {
       io.emit('chat', { name: 'System', color: '', text: `${p.name} hat die Welt verlassen.`, system: true });
       io.emit('player-left', socket.id);
       players.delete(socket.id);
+
+      // ---- Cleanup activeGame-State des disconnectenden Spielers ----
+      if (activeGame) {
+        if (activeGame.scores) delete activeGame.scores[socket.id];
+        if (Array.isArray(activeGame.finishers)) {
+          activeGame.finishers = activeGame.finishers.filter(f => f.id !== socket.id);
+        }
+        if (activeGame.answers) {
+          Object.values(activeGame.answers).forEach(qAns => { delete qAns[socket.id]; });
+        }
+
+        // Tag-Spiel: wenn der Tagger geht, neuen Tagger würfeln (oder Spiel beenden)
+        if (activeGame.type === 'tag' && activeGame.tagger === socket.id) {
+          const candidates = Array.from(players.values()).filter(x => !x.tagged);
+          if (candidates.length === 0) {
+            // Keine Spieler mehr übrig → Spiel beenden
+            io.emit('chat', { name: 'System', color: '', text: 'Tagger hat verlassen — Spiel beendet.', system: true });
+            io.emit('game-ended', {
+              game: activeGame,
+              scores: activeGame.scores,
+              leaderboard: buildLeaderboard(activeGame),
+              stopped: true,
+            });
+            activeGame = null; gameItems = []; abZones = null; raceGoal = null;
+            players.forEach(x => x.tagged = false);
+          } else {
+            const newTagger = candidates[Math.floor(Math.random() * candidates.length)];
+            activeGame.tagger = newTagger.id;
+            io.emit('chat', { name: 'System', color: '', text: `Tagger hat verlassen — ${newTagger.name} ist jetzt der Fänger!`, system: true });
+            io.emit('tag-new-tagger', { taggerId: newTagger.id });
+          }
+        }
+      }
     }
     console.log(`Disconnect: ${socket.id} (${players.size}/${MAX_PLAYERS})`);
   });
@@ -245,7 +319,16 @@ io.on('connection', (socket) => {
 // ===================== GAME SERVER LOGIC =====================
 function startGameServer(data) {
   const serverStartTime = Date.now();
-  activeGame = { type: data.type, duration: data.duration, startTime: serverStartTime, scores: {} };
+  // `participants`: Snapshot der Spieler-IDs zu Spielstart. Mid-Game-Joiner
+  // sind NICHT drin — relevant für 'tag', damit neue Spieler nicht sofort
+  // Zielscheibe werden, ohne zu wissen was läuft.
+  activeGame = {
+    type: data.type,
+    duration: data.duration,
+    startTime: serverStartTime,
+    scores: {},
+    participants: new Set(Array.from(players.keys())),
+  };
   players.forEach(p => p.tagged = false);
 
   if (data.type === 'tag') {
@@ -374,6 +457,8 @@ function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
 setInterval(() => {
   if (!agentsEnabled) return;
+  // CPU sparen wenn niemand verbunden ist (Render Free-Tier).
+  if (players.size === 0) return;
   const now = Date.now();
   agents.forEach(a => {
     const cfg = agentConfigs.find(c => c.id === a.id);
@@ -430,7 +515,12 @@ setInterval(() => {
     activeGame.currentQ++;
     if (activeGame.currentQ < activeGame.questions.length) {
       activeGame._qStartTime = Date.now();
+      // Capture den Game-Startzeitpunkt um sicherzustellen, dass wir nach dem
+      // setTimeout noch das gleiche Spiel haben (stop-game / disconnect hätten
+      // activeGame sonst auf null gesetzt).
+      const gameStartAtSend = activeGame.startTime;
       setTimeout(() => {
+        if (!activeGame || activeGame.type !== 'ab' || activeGame.startTime !== gameStartAtSend) return;
         io.emit('ab-question', { idx: activeGame.currentQ, question: activeGame.questions[activeGame.currentQ] });
       }, 2000);
     } else {

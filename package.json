@@ -1,7 +1,7 @@
 {
   "name": "virtual-world-multiplayer",
   "version": "1.0.0",
-  "description": "Multiplayer Virtual World — bis zu 20 Spieler mit Minispielen",
+  "description": "Multiplayer Virtual World — bis zu 50 Spieler mit Minispielen",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

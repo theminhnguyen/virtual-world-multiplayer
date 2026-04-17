@@ -422,7 +422,12 @@ function connectSocket(name,color){
   if(typeof io==='undefined'){addChatMsg('System','','⚠️ Socket.io nicht geladen — nur Single-Player!',true);return;}
   socket=io();
   socket.on('connect',()=>{myId=socket.id;socket.emit('join',{name,color});});
-  socket.on('server-full',()=>addChatMsg('System','','⚠️ Server voll (max 20)!',true));
+  socket.on('server-full',()=>{
+    addChatMsg('System','','⚠️ Server voll (max 50)!',true);
+    // Blockierendes Popup, weil der User sonst nichts mitbekommt (Chat ist beim
+    // Verbindungsaufbau oft noch nicht sichtbar).
+    endGame('Server voll','🚫','Der Server hat die Kapazität erreicht (max 50 Spieler). Versuch es später nochmal.');
+  });
   socket.on('init',(d)=>{
     // Remote-Spieler aus Server-State erzeugen
     d.players.forEach(p=>{if(p.id!==myId)addRemotePlayer(p);});
@@ -507,7 +512,19 @@ function connectSocket(name,color){
     if(!ab&&Array.isArray(d?.abResults)&&d.abResults.length){ab=d.abResults;autoClose=autoClose||10000;}
     endGame(title,result,detail,lb,autoClose,ab);
   });
-  socket.on('game-stopped',()=>{if(activeGame){activeGame=null;gameItems=[];abZones=null;raceGoal=null;document.getElementById('game-hud').classList.remove('show');document.getElementById('game-scoreboard').classList.remove('show');document.getElementById('race-arrow').style.display='none';}});
+  // Hinweis: 'game-stopped' wird vom Server seit der stop→game-ended-Umstellung
+  // nicht mehr gesendet; der game-ended-Handler übernimmt das Popup-Handling.
+  // Falls irgendwer auf einer alten Server-Version ist, räumen wir hier trotzdem auf.
+  socket.on('game-stopped',()=>{
+    if(activeGame){activeGame=null;gameItems=[];abZones=null;raceGoal=null;
+      document.getElementById('game-hud').classList.remove('show');
+      document.getElementById('game-scoreboard').classList.remove('show');
+      document.getElementById('race-arrow').style.display='none';}
+  });
+  // Tag: neuer Tagger wurde gewählt (wenn der ursprüngliche disconnected ist)
+  socket.on('tag-new-tagger',d=>{
+    if(activeGame&&activeGame.type==='tag'){activeGame.tagger=d.taggerId;}
+  });
   socket.on('item-collected',d=>{if(d.itemIdx<gameItems.length)gameItems[d.itemIdx].collected=true;});
   socket.on('item-spawned',d=>{gameItems[d.idx]=d.item;});
   socket.on('player-tagged',d=>{const e=entities.find(e2=>e2.remoteId===d.targetId);if(e)e.tagged=true;});
