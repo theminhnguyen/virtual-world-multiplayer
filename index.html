@@ -450,7 +450,8 @@ function connectSocket(name,color){
     },600);}},1000);
   });
   socket.on('game-ended',d=>{
-    const type=activeGame?.type;
+    const type=activeGame?.type||d?.game?.type;
+    const title=d?.stopped?'Spiel abgebrochen':'Spiel beendet!';
     let result='🎮',detail='Spiel beendet.',lb=null,autoClose=0;
     if(type==='collect'){
       const myScore=d.scores?.[myId]||0;
@@ -459,13 +460,17 @@ function connectSocket(name,color){
       lb=buildLeaderboardRows(d);
       autoClose=10000; // 10 Sek Auto-Close fürs Leaderboard
     } else if(type==='tag'){
-      result='Gefangen: '+(activeGame.score||0);
+      const myScore=d.scores?.[myId]??(activeGame?.score||0);
+      result='Gefangen: '+myScore;
       detail='Zeit vorbei!';
       lb=buildLeaderboardRows(d);
       autoClose=10000;
     }
-    else if(type==='race'){result=activeGame.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':'Nicht geschafft';detail=activeGame.finished?'Gut gemacht!':'Versuch nochmal!';}
-    endGame('Spiel beendet!',result,detail,lb,autoClose);
+    else if(type==='race'){result=activeGame?.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':'Nicht geschafft';detail=activeGame?.finished?'Gut gemacht!':'Versuch nochmal!';}
+    // Fallback: Wenn wir einen Leaderboard vom Server haben, aber den Typ nicht
+    // kennen (z.B. activeGame wurde schon lokal abgeräumt), zeig ihn trotzdem.
+    if(!lb&&Array.isArray(d?.leaderboard)&&d.leaderboard.length){lb=buildLeaderboardRows(d);autoClose=autoClose||10000;}
+    endGame(title,result,detail,lb,autoClose);
   });
   socket.on('game-stopped',()=>{if(activeGame){activeGame=null;gameItems=[];abZones=null;raceGoal=null;document.getElementById('game-hud').classList.remove('show');document.getElementById('game-scoreboard').classList.remove('show');document.getElementById('race-arrow').style.display='none';}});
   socket.on('item-collected',d=>{if(d.itemIdx<gameItems.length)gameItems[d.itemIdx].collected=true;});
@@ -833,10 +838,21 @@ function closeGameEnd(){
 }
 function stopGameEarly(){
   if(!activeGame)return;
-  if(socket&&socket.connected){socket.emit('stop-game');}
+  // Im Multiplayer übernimmt der Server das Ende (schickt game-ended mit
+  // Leaderboard an alle). Kein lokales Popup hier, sonst wird's doppelt gezeigt.
+  if(socket&&socket.connected){socket.emit('stop-game');return;}
+  // Single-Player: lokales Popup inkl. Leaderboard (falls vorhanden)
   const type=activeGame.type;
   if(type==='tag')endGame('Abgebrochen','Gefangen: '+(activeGame.score||0),`Spiel vorzeitig beendet.`);
-  else if(type==='collect'){let d=`Du: ${activeGame.score} Punkte`;if(activeGame.simScores)Object.entries(activeGame.simScores).forEach(([n,s])=>d+=`\n${n}: ${s}`);endGame('Abgebrochen','⭐ '+activeGame.score,d);}
+  else if(type==='collect'){
+    const rows=[{id:'me',name:player?.name||'Du',color:player?.color||'#3b82f6',score:activeGame.score||0,you:true}];
+    if(activeGame.simScores)Object.entries(activeGame.simScores).forEach(([n,s])=>{
+      const e=entities.find(x=>x.name===n);
+      rows.push({id:n,name:n,color:e?e.color:'#888',score:s,you:false});
+    });
+    rows.sort((a,b)=>b.score-a.score);
+    endGame('Abgebrochen','⭐ '+activeGame.score,`Dein Score: ${activeGame.score}`,rows,10000);
+  }
   else if(type==='ab')endGame('Abgebrochen','🅰️🅱️',`${activeGame.currentQ} von ${activeGame.questions.length} Fragen beantwortet.`);
   else if(type==='race')endGame('Abgebrochen',activeGame.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':'Nicht geschafft','Spiel vorzeitig beendet.');
 }

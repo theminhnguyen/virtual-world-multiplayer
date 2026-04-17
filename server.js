@@ -140,7 +140,14 @@ io.on('connection', (socket) => {
 
   socket.on('stop-game', () => {
     if (activeGame) {
-      io.emit('game-stopped', activeGame);
+      // Sende game-ended mit Leaderboard (nicht nur game-stopped), damit alle
+      // Spieler das finale Ranking sehen — auch bei vorzeitigem Abbruch.
+      io.emit('game-ended', {
+        game: activeGame,
+        scores: activeGame.scores,
+        leaderboard: buildLeaderboard(activeGame),
+        stopped: true,
+      });
       activeGame = null; gameItems = []; abZones = null; raceGoal = null;
       players.forEach(p => p.tagged = false);
       io.emit('chat', { name: 'System', color: '', text: 'Spiel wurde beendet.', system: true });
