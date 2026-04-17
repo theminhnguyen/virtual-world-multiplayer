@@ -171,6 +171,26 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
 #end-countdown.show{display:block}
 #end-countdown-bar{height:100%;width:100%;background:linear-gradient(135deg,#fbbf24,#f59e0b);transform-origin:left center}
 #end-countdown-bar.run{transition:transform linear;transform:scaleX(0)}
+.game-end-box{max-width:500px}
+#end-ab-results{display:none;margin:0 0 18px;max-height:320px;overflow-y:auto;text-align:left;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:12px}
+#end-ab-results.show{display:block}
+.abr-q{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.06)}
+.abr-q:last-child{border-bottom:none}
+.abr-q-title{font-size:12px;font-weight:600;color:#e5e7eb;margin-bottom:6px}
+.abr-q-title .num{color:#9ca3af;font-weight:400;margin-right:4px}
+.abr-opts{display:flex;gap:8px;flex-wrap:wrap}
+.abr-opt{flex:1;min-width:140px;padding:6px 8px;border-radius:8px;font-size:11px;line-height:1.4}
+.abr-opt.a{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3)}
+.abr-opt.b{background:rgba(251,146,60,.15);border:1px solid rgba(251,146,60,.3)}
+.abr-opt .label{font-weight:700;margin-bottom:2px}
+.abr-opt.a .label{color:#93c5fd}
+.abr-opt.b .label{color:#fdba74}
+.abr-opt .text{color:#cbd5e1;margin-bottom:4px;font-size:11px}
+.abr-opt .names{color:#9ca3af;font-size:10px;display:flex;flex-wrap:wrap;gap:4px 6px}
+.abr-opt .name-chip{display:inline-flex;align-items:center;gap:3px}
+.abr-opt .name-chip .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.abr-opt .name-chip.you{color:#93c5fd;font-weight:600}
+.abr-noans{color:#6b7280;font-size:10px;margin-top:4px;font-style:italic}
 </style>
 </head>
 <body>
@@ -214,7 +234,7 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
   <div id="game-scoreboard"><h4 id="sb-title">Punktestand</h4><div id="sb-entries"></div></div>
   <div id="race-arrow"><svg viewBox="0 0 64 64"><defs><filter id="glow"><feGaussianBlur stdDeviation="2"/></filter></defs><polygon points="32,4 52,40 38,40 38,60 26,60 26,40 12,40" fill="#22c55e" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><text x="32" y="34" font-size="16" fill="#fff" text-anchor="middle" font-weight="bold">🏁</text></svg></div>
   <div id="countdown"></div>
-  <div id="game-end"><div class="game-end-box"><h2 id="end-title"></h2><div class="result" id="end-result"></div><div class="detail" id="end-detail"></div><div id="end-leaderboard"></div><button onclick="closeGameEnd()">Weiter spielen</button><div id="end-countdown"><div id="end-countdown-bar"></div></div></div></div>
+  <div id="game-end"><div class="game-end-box"><h2 id="end-title"></h2><div class="result" id="end-result"></div><div class="detail" id="end-detail"></div><div id="end-leaderboard"></div><div id="end-ab-results"></div><button onclick="closeGameEnd()">Weiter spielen</button><div id="end-countdown"><div id="end-countdown-bar"></div></div></div></div>
 </div>
 <script src="/socket.io/socket.io.js"></script>
 
@@ -452,7 +472,7 @@ function connectSocket(name,color){
   socket.on('game-ended',d=>{
     const type=activeGame?.type||d?.game?.type;
     const title=d?.stopped?'Spiel abgebrochen':'Spiel beendet!';
-    let result='🎮',detail='Spiel beendet.',lb=null,autoClose=0;
+    let result='🎮',detail='Spiel beendet.',lb=null,autoClose=0,ab=null;
     if(type==='collect'){
       const myScore=d.scores?.[myId]||0;
       result='⭐ '+myScore;
@@ -466,11 +486,26 @@ function connectSocket(name,color){
       lb=buildLeaderboardRows(d);
       autoClose=10000;
     }
-    else if(type==='race'){result=activeGame?.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':'Nicht geschafft';detail=activeGame?.finished?'Gut gemacht!':'Versuch nochmal!';}
+    else if(type==='race'){
+      // Eigenes Zeit-/Status in result, Leaderboard darunter
+      const mine=Array.isArray(d?.leaderboard)?d.leaderboard.find(r=>r.id===myId):null;
+      if(activeGame?.finished){result='🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s';detail='Gut gemacht!';}
+      else if(mine?.finished){result='🏁 '+mine.score;detail='Im Ziel angekommen.';}
+      else {result='Nicht geschafft';detail='Du hast das Ziel nicht erreicht.';}
+      lb=buildLeaderboardRows(d);
+      autoClose=10000;
+    }
+    else if(type==='ab'){
+      result='🅰️🅱️';
+      detail='Alle Ergebnisse:';
+      ab=Array.isArray(d?.abResults)?d.abResults:null;
+      autoClose=10000;
+    }
     // Fallback: Wenn wir einen Leaderboard vom Server haben, aber den Typ nicht
     // kennen (z.B. activeGame wurde schon lokal abgeräumt), zeig ihn trotzdem.
-    if(!lb&&Array.isArray(d?.leaderboard)&&d.leaderboard.length){lb=buildLeaderboardRows(d);autoClose=autoClose||10000;}
-    endGame(title,result,detail,lb,autoClose);
+    if(!lb&&!ab&&Array.isArray(d?.leaderboard)&&d.leaderboard.length){lb=buildLeaderboardRows(d);autoClose=autoClose||10000;}
+    if(!ab&&Array.isArray(d?.abResults)&&d.abResults.length){ab=d.abResults;autoClose=autoClose||10000;}
+    endGame(title,result,detail,lb,autoClose,ab);
   });
   socket.on('game-stopped',()=>{if(activeGame){activeGame=null;gameItems=[];abZones=null;raceGoal=null;document.getElementById('game-hud').classList.remove('show');document.getElementById('game-scoreboard').classList.remove('show');document.getElementById('race-arrow').style.display='none';}});
   socket.on('item-collected',d=>{if(d.itemIdx<gameItems.length)gameItems[d.itemIdx].collected=true;});
@@ -798,7 +833,8 @@ function buildLeaderboardRows(d){
     return{id,name:id===myId?(player?.name||'Du'):(e?e.name:'?'),color:id===myId?(player?.color||'#3b82f6'):(e?e.color:'#888'),score:s,you:id===myId};
   }).sort((a,b)=>b.score-a.score);
 }
-function endGame(title,result,detail,leaderboard,autoCloseMs){
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function endGame(title,result,detail,leaderboard,autoCloseMs,abResults){
   activeGame=null;gameItems=[];abZones=null;raceGoal=null;
   document.getElementById('game-hud').classList.remove('show');
   document.getElementById('game-scoreboard').classList.remove('show');
@@ -811,9 +847,24 @@ function endGame(title,result,detail,leaderboard,autoCloseMs){
   // Leaderboard rendern (oder leeren)
   const lbEl=document.getElementById('end-leaderboard');
   if(Array.isArray(leaderboard)&&leaderboard.length){
-    const html=leaderboard.map((r,i)=>{const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':('#'+(i+1));return `<div class="sb-row${r.you?' you':''}"><span class="sb-name"><span class="sb-medal">${medal}</span><span class="sb-dot" style="background:${r.color||'#888'}"></span>${(r.name||'?')}${r.you?' (Du)':''}</span><span class="sb-score">${r.score}</span></div>`;}).join('');
+    const html=leaderboard.map((r,i)=>{
+      // Bei Race: Medaillen nur für finishers; Nicht-Finisher ohne Rang
+      const isRaceNotFin=r.finished===false;
+      const medal=isRaceNotFin?'–':(i===0?'🥇':i===1?'🥈':i===2?'🥉':('#'+(i+1)));
+      return `<div class="sb-row${r.you?' you':''}"><span class="sb-name"><span class="sb-medal">${medal}</span><span class="sb-dot" style="background:${escHtml(r.color||'#888')}"></span>${escHtml(r.name||'?')}${r.you?' (Du)':''}</span><span class="sb-score">${escHtml(r.score)}</span></div>`;
+    }).join('');
     lbEl.innerHTML=html;lbEl.classList.add('show');
   } else {lbEl.innerHTML='';lbEl.classList.remove('show');}
+  // A/B-Ergebnisse rendern (oder leeren)
+  const abEl=document.getElementById('end-ab-results');
+  if(Array.isArray(abResults)&&abResults.length){
+    const renderChips=list=>list.length?list.map(p=>`<span class="name-chip${p.id===myId?' you':''}"><span class="dot" style="background:${escHtml(p.color||'#888')}"></span>${escHtml(p.name||'?')}${p.id===myId?' (Du)':''}</span>`).join(''):'<span style="color:#6b7280">—</span>';
+    const html=abResults.map(q=>{
+      const na=Array.isArray(q.noAnswer)&&q.noAnswer.length?`<div class="abr-noans">Keine Antwort: ${q.noAnswer.map(p=>escHtml(p.name)).join(', ')}</div>`:'';
+      return `<div class="abr-q"><div class="abr-q-title"><span class="num">Frage ${q.idx+1}:</span>${escHtml(q.q)}</div><div class="abr-opts"><div class="abr-opt a"><div class="label">🅰️ ${escHtml(q.a)} <span style="color:#9ca3af;font-weight:400">(${q.aPlayers.length})</span></div><div class="names">${renderChips(q.aPlayers)}</div></div><div class="abr-opt b"><div class="label">🅱️ ${escHtml(q.b)} <span style="color:#9ca3af;font-weight:400">(${q.bPlayers.length})</span></div><div class="names">${renderChips(q.bPlayers)}</div></div></div>${na}</div>`;
+    }).join('');
+    abEl.innerHTML=html;abEl.classList.add('show');
+  } else {abEl.innerHTML='';abEl.classList.remove('show');}
   document.getElementById('game-end').classList.add('show');
   entities.forEach(e=>e.tagged=false);
   // Auto-Close mit Countdown-Bar

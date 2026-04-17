@@ -146,6 +146,7 @@ io.on('connection', (socket) => {
         game: activeGame,
         scores: activeGame.scores,
         leaderboard: buildLeaderboard(activeGame),
+        abResults: buildABResults(activeGame),
         stopped: true,
       });
       activeGame = null; gameItems = []; abZones = null; raceGoal = null;
@@ -289,6 +290,7 @@ function startGameServer(data) {
           game: activeGame,
           scores: activeGame.scores,
           leaderboard: buildLeaderboard(activeGame),
+          abResults: buildABResults(activeGame),
         });
         activeGame = null; gameItems = []; abZones = null; raceGoal = null;
         players.forEach(p => p.tagged = false);
@@ -298,10 +300,35 @@ function startGameServer(data) {
 }
 
 // Baut eine sortierte Leaderboard-Liste mit Namen/Farben für das End-Popup.
-// Funktioniert für 'collect' (scores als Punkte) und 'tag' (scores = Anzahl
-// gefangene). Unbekannte/disconnectete Spieler-IDs werden als '?' angezeigt.
+// 'collect'/'tag': sortiert nach numerischem Score (absteigend).
+// 'race': sortiert nach Finish-Zeit (aufsteigend); Nicht-Finisher kommen
+// unten mit score='—'.
 function buildLeaderboard(game) {
-  if (!game || !game.scores) return [];
+  if (!game) return [];
+
+  if (game.type === 'race') {
+    const finishers = Array.isArray(game.finishers) ? game.finishers : [];
+    const rows = finishers.map(f => {
+      const p = players.get(f.id);
+      return {
+        id: f.id,
+        name: p ? p.name : '?',
+        color: p ? p.color : '#888',
+        time: f.time,
+        score: (f.time / 1000).toFixed(1) + 's',
+        finished: true,
+      };
+    });
+    rows.sort((a, b) => a.time - b.time);
+    // Nicht-Finisher hinten anhängen
+    const finIds = new Set(rows.map(r => r.id));
+    players.forEach((p, id) => {
+      if (!finIds.has(id)) rows.push({ id, name: p.name, color: p.color, score: '—', finished: false });
+    });
+    return rows;
+  }
+
+  if (!game.scores) return [];
   const ids = new Set(Object.keys(game.scores));
   // Nimm auch Spieler mit 0 Punkten mit rein, damit alle Teilnehmer zu sehen sind.
   players.forEach((_, id) => ids.add(id));
@@ -316,6 +343,29 @@ function buildLeaderboard(game) {
   });
   rows.sort((a, b) => b.score - a.score);
   return rows;
+}
+
+// Zusammenfassung für A/B: pro Frage wer A und wer B gewählt hat.
+function buildABResults(game) {
+  if (!game || game.type !== 'ab') return null;
+  const questions = game.questions || [];
+  const answersByQ = game.answers || {};
+  return questions.map((q, idx) => {
+    const ans = answersByQ[idx] || {};
+    const aPlayers = [], bPlayers = [], noAnswer = [];
+    // Alle aktuellen Spieler iterieren + zusätzliche Spieler aus den Antworten
+    const ids = new Set(Object.keys(ans));
+    players.forEach((_, id) => ids.add(id));
+    ids.forEach(id => {
+      const p = players.get(id);
+      const entry = { id, name: p ? p.name : '?', color: p ? p.color : '#888' };
+      const choice = ans[id];
+      if (choice === 'A') aPlayers.push(entry);
+      else if (choice === 'B') bPlayers.push(entry);
+      else noAnswer.push(entry);
+    });
+    return { idx, q: q.q, a: q.a, b: q.b, aPlayers, bPlayers, noAnswer };
+  });
 }
 
 // ===================== AGENT SERVER TICK =====================
@@ -385,7 +435,11 @@ setInterval(() => {
       }, 2000);
     } else {
       // All questions done
-      io.emit('game-ended', { game: activeGame, scores: activeGame.answers });
+      io.emit('game-ended', {
+        game: activeGame,
+        scores: activeGame.answers,
+        abResults: buildABResults(activeGame),
+      });
       io.emit('chat', { name: 'System', color: '', text: '🅰️🅱️ Alle Fragen beantwortet!', system: true });
       activeGame = null; abZones = null;
     }
