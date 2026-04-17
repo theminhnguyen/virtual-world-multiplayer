@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
 <title>Virtual World Chat</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -16,6 +16,30 @@ body{background:#0a0a1a;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;o
 .login-box input:focus{border-color:#3b82f6}.login-box input::placeholder{color:#555}
 .login-box button{display:block;width:280px;margin:16px auto 0;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:1.1em;cursor:pointer;font-weight:600;transition:transform .2s}
 .login-box button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(59,130,246,.4)}
+.login-credit{margin-top:22px;font-size:.72em;color:rgba(255,255,255,.35);letter-spacing:.3px;font-style:italic}
+/* ===== MOBILE CONTROLS ===== */
+#mobile-controls{position:fixed;inset:0;pointer-events:none;z-index:300;display:none}
+#mobile-controls.show{display:block}
+#joystick{position:absolute;left:22px;bottom:28px;width:130px;height:130px;border-radius:50%;background:rgba(10,10,30,.35);border:2px solid rgba(255,255,255,.18);pointer-events:auto;touch-action:none;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.35)}
+#joystick-knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#93c5fd,#3b82f6 70%);box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 -3px 8px rgba(0,0,0,.25);pointer-events:none;transition:transform .04s linear}
+#mobile-sprint{position:absolute;right:22px;bottom:36px;width:86px;height:86px;border-radius:50%;background:rgba(251,191,36,.15);border:2px solid rgba(251,191,36,.45);color:#fbbf24;font-size:2.1em;pointer-events:auto;touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer}
+#mobile-sprint.active{background:rgba(251,191,36,.5);transform:scale(.92)}
+#mobile-chat-btn,#mobile-mg-btn,#mobile-stop-btn{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(10,10,30,.75);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:1.15em;pointer-events:auto;-webkit-tap-highlight-color:transparent;cursor:pointer;backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center}
+#mobile-chat-btn{right:120px;bottom:60px}
+#mobile-mg-btn{right:26px;bottom:136px}
+#mobile-stop-btn{right:90px;bottom:136px;background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5);color:#fca5a5;display:none}
+#mobile-stop-btn.show{display:flex}
+@media (max-width:720px){
+  #hud{font-size:10px}
+  #minimap{transform:scale(.8);transform-origin:top right}
+  .top-btns{top:6px;gap:4px}
+  .top-btn{padding:6px 10px;font-size:10px}
+  #chat-panel{font-size:.9em}
+  .login-box{padding:30px 26px}
+  .login-box input,.login-box button{width:240px}
+}
+.login-credit .heart{color:#f87171;display:inline-block;animation:heartbeat 1.6s ease-in-out infinite}
+@keyframes heartbeat{0%,100%{transform:scale(1)}15%{transform:scale(1.25)}30%{transform:scale(1)}45%{transform:scale(1.2)}60%{transform:scale(1)}}
 .color-picker{display:flex;gap:10px;justify-content:center;margin:20px 0}
 .color-opt{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .2s}
 .color-opt:hover,.color-opt.selected{transform:scale(1.2);border-color:#fff}
@@ -201,6 +225,7 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
     <input type="text" id="name-input" placeholder="Dein Name..." maxlength="16" autofocus>
     <div class="color-picker" id="color-picker"></div>
     <button onclick="joinWorld()">Beitreten</button>
+    <div class="login-credit">vibe coded by Minh with <span class="heart">&lt;3</span></div>
   </div>
 </div>
 
@@ -221,6 +246,14 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
   </div>
   <div id="controls-help">
     <kbd>WASD</kbd> Laufen <kbd>Shift</kbd> Sprint <kbd>Enter</kbd> Chat <kbd>C</kbd> Chat <kbd>Tab</kbd> Config <kbd>M</kbd> Minigames <kbd>G</kbd> Agents An/Aus <kbd>Q</kbd> Spiel beenden
+  </div>
+  <!-- Mobile Touch Controls -->
+  <div id="mobile-controls">
+    <div id="joystick"><div id="joystick-knob"></div></div>
+    <div id="mobile-sprint">⚡</div>
+    <button id="mobile-chat-btn" title="Chat">💬</button>
+    <button id="mobile-mg-btn" onclick="openMinigameMenu()" title="Minigames">🎮</button>
+    <button id="mobile-stop-btn" onclick="stopGameEarly()" title="Beenden">✕</button>
   </div>
   <button id="chat-toggle-btn" onclick="toggleChatPanel()" title="Chat (C)">💬</button>
   <div id="chat-panel">
@@ -1440,6 +1473,96 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 document.getElementById('chat-input').addEventListener('focus',()=>{chatFocused=true;});
 document.getElementById('chat-input').addEventListener('blur',()=>{chatFocused=false;});
+
+// ===================== MOBILE TOUCH CONTROLS =====================
+(function initMobileControls(){
+  const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+  if(!isTouch)return;
+  const ctrl=document.getElementById('mobile-controls');
+  ctrl.classList.add('show');
+  // Hide desktop controls-help on touch
+  const help=document.getElementById('controls-help');if(help)help.style.display='none';
+
+  const joy=document.getElementById('joystick');
+  const knob=document.getElementById('joystick-knob');
+  const sprintBtn=document.getElementById('mobile-sprint');
+  const chatBtn=document.getElementById('mobile-chat-btn');
+  const stopBtn=document.getElementById('mobile-stop-btn');
+
+  let joyId=null, joyCX=0, joyCY=0, joyMaxR=55;
+
+  function clearJoyKeys(){
+    keys['ArrowLeft']=false;keys['ArrowRight']=false;keys['ArrowUp']=false;keys['ArrowDown']=false;
+    knob.style.transform='';
+  }
+  function setKeysFromVec(dx,dy){
+    // Dead zone: only trigger movement past ~25% of max radius
+    const dz=joyMaxR*.25;
+    keys['ArrowLeft']=dx<-dz;
+    keys['ArrowRight']=dx>dz;
+    keys['ArrowUp']=dy<-dz;
+    keys['ArrowDown']=dy>dz;
+  }
+  function handleMove(t){
+    let dx=t.clientX-joyCX, dy=t.clientY-joyCY;
+    const mag=Math.sqrt(dx*dx+dy*dy);
+    if(mag>joyMaxR){dx=dx*joyMaxR/mag;dy=dy*joyMaxR/mag;}
+    knob.style.transform=`translate(${dx}px, ${dy}px)`;
+    setKeysFromVec(dx,dy);
+  }
+
+  joy.addEventListener('touchstart',e=>{
+    const t=e.changedTouches[0];
+    joyId=t.identifier;
+    const rect=joy.getBoundingClientRect();
+    joyCX=rect.left+rect.width/2;
+    joyCY=rect.top+rect.height/2;
+    joyMaxR=rect.width/2-12;
+    handleMove(t);
+    e.preventDefault();
+  },{passive:false});
+
+  joy.addEventListener('touchmove',e=>{
+    for(const t of e.changedTouches){
+      if(t.identifier===joyId){handleMove(t);e.preventDefault();break;}
+    }
+  },{passive:false});
+
+  const endJoy=e=>{
+    for(const t of e.changedTouches){
+      if(t.identifier===joyId){joyId=null;clearJoyKeys();e.preventDefault();break;}
+    }
+  };
+  joy.addEventListener('touchend',endJoy,{passive:false});
+  joy.addEventListener('touchcancel',endJoy,{passive:false});
+
+  // Sprint button
+  const sprintDown=e=>{keys['ShiftLeft']=true;sprintBtn.classList.add('active');e.preventDefault();};
+  const sprintUp=e=>{keys['ShiftLeft']=false;sprintBtn.classList.remove('active');e.preventDefault();};
+  sprintBtn.addEventListener('touchstart',sprintDown,{passive:false});
+  sprintBtn.addEventListener('touchend',sprintUp,{passive:false});
+  sprintBtn.addEventListener('touchcancel',sprintUp,{passive:false});
+
+  // Chat button — open panel and focus input
+  chatBtn.addEventListener('click',()=>{
+    if(typeof toggleChatPanel==='function'){
+      // Ensure panel is visible (un-hide it)
+      if(chatHidden)toggleChatPanel();
+      const inp=document.getElementById('chat-input');
+      if(inp){inp.focus();}
+    }
+  });
+
+  // Show stop button only during active game
+  setInterval(()=>{
+    if(activeGame)stopBtn.classList.add('show');
+    else stopBtn.classList.remove('show');
+  },500);
+
+  // Prevent accidental scrolling/pull-to-refresh on the canvas itself
+  const canv=document.getElementById('world-canvas');
+  if(canv){canv.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});}
+})();
 
 // ===================== UTILS =====================
 function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
