@@ -159,6 +159,18 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
 .game-end-box .result{font-size:3em;font-weight:900;margin:12px 0;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .game-end-box .detail{font-size:13px;color:#888;margin-bottom:16px;line-height:1.6}
 .game-end-box button{padding:12px 30px;border-radius:12px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+#end-leaderboard{display:none;margin:0 0 18px;max-height:260px;overflow-y:auto;text-align:left;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:12px}
+#end-leaderboard.show{display:block}
+#end-leaderboard .sb-row{padding:5px 2px}
+#end-leaderboard .sb-row.you{background:rgba(59,130,246,.22);border-radius:6px;padding:5px 8px;margin:2px -4px}
+#end-leaderboard .sb-name{font-size:13px}
+#end-leaderboard .sb-score{font-size:14px}
+#end-leaderboard .sb-medal{font-size:14px;margin-right:3px}
+#end-leaderboard .empty{color:#666;font-size:11px;text-align:center;padding:10px}
+#end-countdown{display:none;margin-top:14px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+#end-countdown.show{display:block}
+#end-countdown-bar{height:100%;width:100%;background:linear-gradient(135deg,#fbbf24,#f59e0b);transform-origin:left center}
+#end-countdown-bar.run{transition:transform linear;transform:scaleX(0)}
 </style>
 </head>
 <body>
@@ -202,7 +214,7 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
   <div id="game-scoreboard"><h4 id="sb-title">Punktestand</h4><div id="sb-entries"></div></div>
   <div id="race-arrow"><svg viewBox="0 0 64 64"><defs><filter id="glow"><feGaussianBlur stdDeviation="2"/></filter></defs><polygon points="32,4 52,40 38,40 38,60 26,60 26,40 12,40" fill="#22c55e" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><text x="32" y="34" font-size="16" fill="#fff" text-anchor="middle" font-weight="bold">🏁</text></svg></div>
   <div id="countdown"></div>
-  <div id="game-end"><div class="game-end-box"><h2 id="end-title"></h2><div class="result" id="end-result"></div><div class="detail" id="end-detail"></div><button onclick="closeGameEnd()">Weiter spielen</button></div></div>
+  <div id="game-end"><div class="game-end-box"><h2 id="end-title"></h2><div class="result" id="end-result"></div><div class="detail" id="end-detail"></div><div id="end-leaderboard"></div><button onclick="closeGameEnd()">Weiter spielen</button><div id="end-countdown"><div id="end-countdown-bar"></div></div></div></div>
 </div>
 <script src="/socket.io/socket.io.js"></script>
 
@@ -439,15 +451,21 @@ function connectSocket(name,color){
   });
   socket.on('game-ended',d=>{
     const type=activeGame?.type;
-    let result='🎮',detail='Spiel beendet.';
+    let result='🎮',detail='Spiel beendet.',lb=null,autoClose=0;
     if(type==='collect'){
       const myScore=d.scores?.[myId]||0;
       result='⭐ '+myScore;
       detail='Dein Score: '+myScore;
-      if(d.scores){const arr=Object.entries(d.scores).sort((a,b)=>b[1]-a[1]);detail='Ergebnis:\n'+arr.map(([id,s],i)=>{const e=entities.find(x=>x.remoteId===id);const n=id===myId?'Du':(e?e.name:'?');return `${i+1}. ${n}: ${s} Punkte`;}).join('\n');}
-    } else if(type==='tag'){result='Gefangen: '+(activeGame.score||0);detail='Zeit vorbei!';}
+      lb=buildLeaderboardRows(d);
+      autoClose=10000; // 10 Sek Auto-Close fürs Leaderboard
+    } else if(type==='tag'){
+      result='Gefangen: '+(activeGame.score||0);
+      detail='Zeit vorbei!';
+      lb=buildLeaderboardRows(d);
+      autoClose=10000;
+    }
     else if(type==='race'){result=activeGame.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':'Nicht geschafft';detail=activeGame.finished?'Gut gemacht!':'Versuch nochmal!';}
-    endGame('Spiel beendet!',result,detail);
+    endGame('Spiel beendet!',result,detail,lb,autoClose);
   });
   socket.on('game-stopped',()=>{if(activeGame){activeGame=null;gameItems=[];abZones=null;raceGoal=null;document.getElementById('game-hud').classList.remove('show');document.getElementById('game-scoreboard').classList.remove('show');document.getElementById('race-arrow').style.display='none';}});
   socket.on('item-collected',d=>{if(d.itemIdx<gameItems.length)gameItems[d.itemIdx].collected=true;});
@@ -732,9 +750,14 @@ function updateMinigame(dt){
   if(remaining<=0&&activeGame.type!=='ab'&&!(socket&&socket.connected)){
     if(activeGame.type==='tag')endGame('Zeit um!','Gefangen: '+activeGame.score,`Du hast ${activeGame.score} Spieler gefangen!`);
     else if(activeGame.type==='collect'){
-      let detail=`Du: ${activeGame.score} Punkte`;
-      if(activeGame.simScores)Object.entries(activeGame.simScores).forEach(([n,s])=>detail+=`\n${n}: ${s}`);
-      endGame('Zeit um!','⭐ '+activeGame.score,detail);
+      // Leaderboard für Single-Player (Spieler + ggf. Sim-NPCs)
+      const rows=[{id:'me',name:player?.name||'Du',color:player?.color||'#3b82f6',score:activeGame.score||0,you:true}];
+      if(activeGame.simScores)Object.entries(activeGame.simScores).forEach(([n,s])=>{
+        const e=entities.find(x=>x.name===n);
+        rows.push({id:n,name:n,color:e?e.color:'#888',score:s,you:false});
+      });
+      rows.sort((a,b)=>b.score-a.score);
+      endGame('Zeit um!','⭐ '+activeGame.score,`Dein Score: ${activeGame.score}`,rows,10000);
     }
     else if(activeGame.type==='race'){
       if(!activeGame.finished)endGame('Zeit um!','Nicht geschafft!','Versuch es nochmal — du warst so nah dran!');
@@ -756,7 +779,21 @@ function updateCollectScoreboard(){
   document.getElementById('sb-entries').innerHTML=html||'<div style="color:#666;font-size:10px">Noch keine Punkte</div>';
 }
 function showGameMsg(msg){const el=document.getElementById('game-msg');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3000);}
-function endGame(title,result,detail){
+let endAutoCloseTimer=null;
+// Baut eine Leaderboard-Liste aus der `game-ended`-Payload. Bevorzugt die vom
+// Server gelieferte `leaderboard`-Liste (hat Namen/Farben auch für disconnectete
+// Spieler); fällt zurück auf `scores` + lokale Entities.
+function buildLeaderboardRows(d){
+  if(Array.isArray(d?.leaderboard)&&d.leaderboard.length){
+    return d.leaderboard.map(r=>({id:r.id,name:r.name,color:r.color,score:r.score,you:r.id===myId}));
+  }
+  if(!d?.scores)return[];
+  return Object.entries(d.scores).map(([id,s])=>{
+    const e=entities.find(x=>x.remoteId===id);
+    return{id,name:id===myId?(player?.name||'Du'):(e?e.name:'?'),color:id===myId?(player?.color||'#3b82f6'):(e?e.color:'#888'),score:s,you:id===myId};
+  }).sort((a,b)=>b.score-a.score);
+}
+function endGame(title,result,detail,leaderboard,autoCloseMs){
   activeGame=null;gameItems=[];abZones=null;raceGoal=null;
   document.getElementById('game-hud').classList.remove('show');
   document.getElementById('game-scoreboard').classList.remove('show');
@@ -766,10 +803,34 @@ function endGame(title,result,detail){
   document.getElementById('end-title').textContent=title;
   document.getElementById('end-result').textContent=result;
   document.getElementById('end-detail').textContent=detail;
+  // Leaderboard rendern (oder leeren)
+  const lbEl=document.getElementById('end-leaderboard');
+  if(Array.isArray(leaderboard)&&leaderboard.length){
+    const html=leaderboard.map((r,i)=>{const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':('#'+(i+1));return `<div class="sb-row${r.you?' you':''}"><span class="sb-name"><span class="sb-medal">${medal}</span><span class="sb-dot" style="background:${r.color||'#888'}"></span>${(r.name||'?')}${r.you?' (Du)':''}</span><span class="sb-score">${r.score}</span></div>`;}).join('');
+    lbEl.innerHTML=html;lbEl.classList.add('show');
+  } else {lbEl.innerHTML='';lbEl.classList.remove('show');}
   document.getElementById('game-end').classList.add('show');
   entities.forEach(e=>e.tagged=false);
+  // Auto-Close mit Countdown-Bar
+  if(endAutoCloseTimer){clearTimeout(endAutoCloseTimer);endAutoCloseTimer=null;}
+  const cd=document.getElementById('end-countdown');
+  const bar=document.getElementById('end-countdown-bar');
+  if(autoCloseMs&&autoCloseMs>0){
+    cd.classList.add('show');
+    // Reset Bar (volle Breite) → nach einem Frame Transition starten
+    bar.classList.remove('run');bar.style.transition='none';bar.style.transform='scaleX(1)';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      bar.style.transition=`transform ${autoCloseMs}ms linear`;
+      bar.style.transform='scaleX(0)';
+    }));
+    endAutoCloseTimer=setTimeout(()=>{closeGameEnd();},autoCloseMs);
+  } else {cd.classList.remove('show');}
 }
-function closeGameEnd(){document.getElementById('game-end').classList.remove('show');}
+function closeGameEnd(){
+  document.getElementById('game-end').classList.remove('show');
+  document.getElementById('end-countdown').classList.remove('show');
+  if(endAutoCloseTimer){clearTimeout(endAutoCloseTimer);endAutoCloseTimer=null;}
+}
 function stopGameEarly(){
   if(!activeGame)return;
   if(socket&&socket.connected){socket.emit('stop-game');}

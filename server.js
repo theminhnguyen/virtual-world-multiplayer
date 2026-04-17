@@ -278,12 +278,37 @@ function startGameServer(data) {
   if (data.type !== 'ab') {
     setTimeout(() => {
       if (activeGame && activeGame.startTime === serverStartTime) {
-        io.emit('game-ended', { game: activeGame, scores: activeGame.scores });
+        io.emit('game-ended', {
+          game: activeGame,
+          scores: activeGame.scores,
+          leaderboard: buildLeaderboard(activeGame),
+        });
         activeGame = null; gameItems = []; abZones = null; raceGoal = null;
         players.forEach(p => p.tagged = false);
       }
     }, data.duration + 3500); // +countdown
   }
+}
+
+// Baut eine sortierte Leaderboard-Liste mit Namen/Farben für das End-Popup.
+// Funktioniert für 'collect' (scores als Punkte) und 'tag' (scores = Anzahl
+// gefangene). Unbekannte/disconnectete Spieler-IDs werden als '?' angezeigt.
+function buildLeaderboard(game) {
+  if (!game || !game.scores) return [];
+  const ids = new Set(Object.keys(game.scores));
+  // Nimm auch Spieler mit 0 Punkten mit rein, damit alle Teilnehmer zu sehen sind.
+  players.forEach((_, id) => ids.add(id));
+  const rows = Array.from(ids).map(id => {
+    const p = players.get(id);
+    return {
+      id,
+      name: p ? p.name : '?',
+      color: p ? p.color : '#888',
+      score: game.scores[id] || 0,
+    };
+  });
+  rows.sort((a, b) => b.score - a.score);
+  return rows;
 }
 
 // ===================== AGENT SERVER TICK =====================
