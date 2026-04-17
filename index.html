@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virtual World Chat</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh}
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0a0a2e,#1a1a3e);display:flex;align-items:center;justify-content:center;z-index:1000;transition:opacity .5s}
+#login-screen.hidden{opacity:0;pointer-events:none}
+.login-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:50px;text-align:center;backdrop-filter:blur(20px);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.login-box h1{font-size:2.5em;margin-bottom:8px;background:linear-gradient(135deg,#6ee7b7,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-box p{color:#888;margin-bottom:30px;font-size:.95em}
+.login-box input{width:280px;padding:14px 20px;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-size:1.1em;outline:none}
+.login-box input:focus{border-color:#3b82f6}.login-box input::placeholder{color:#555}
+.login-box button{display:block;width:280px;margin:16px auto 0;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:1.1em;cursor:pointer;font-weight:600;transition:transform .2s}
+.login-box button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(59,130,246,.4)}
+.color-picker{display:flex;gap:10px;justify-content:center;margin:20px 0}
+.color-opt{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .2s}
+.color-opt:hover,.color-opt.selected{transform:scale(1.2);border-color:#fff}
+#game-container{position:relative;width:100vw;height:100vh;overflow:hidden;background:#1a2a1a}
+#world-canvas{position:absolute;top:0;left:0;image-rendering:pixelated}
+
+/* Chat */
+#chat-panel{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:min(600px,90vw);z-index:100;transition:opacity .25s,transform .25s}
+#chat-panel.hidden{opacity:0;pointer-events:none;transform:translateX(-50%) translateY(20px)}
+#chat-log{height:140px;overflow-y:auto;padding:12px;margin-bottom:4px;background:rgba(10,10,30,.88);border-radius:12px 12px 0 0;backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-bottom:none;scrollbar-width:thin;scrollbar-color:#333 transparent}
+.chat-msg{margin-bottom:5px;font-size:12px;line-height:1.4}.chat-msg .name{font-weight:700}
+.chat-msg.system{color:#666;font-style:italic}.chat-msg.agent .name{color:#a78bfa}
+#chat-input-area{display:flex;gap:6px;background:rgba(10,10,30,.92);padding:8px 12px;border-radius:0 0 12px 12px;backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-top:1px solid rgba(255,255,255,.05)}
+#chat-input{flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-size:13px;outline:none}
+#chat-input:focus{border-color:#3b82f6}#chat-input::placeholder{color:#555}
+#chat-send{padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-weight:600;cursor:pointer;font-size:13px}
+
+/* HUD */
+#hud{position:fixed;top:12px;left:12px;z-index:100;display:flex;gap:8px;align-items:center}
+.hud-badge{background:rgba(10,10,30,.82);padding:6px 12px;border-radius:8px;font-size:10px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08)}
+#sprint-bar-wrap{position:fixed;bottom:210px;left:50%;transform:translateX(-50%);width:120px;height:6px;background:rgba(0,0,0,.5);border-radius:3px;z-index:50;opacity:0;transition:opacity .3s}
+#sprint-bar-wrap.show{opacity:1}
+#sprint-bar{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:3px;width:100%;transition:width .1s}
+#minimap{position:fixed;top:12px;right:12px;width:140px;height:93px;background:rgba(10,10,30,.82);border-radius:8px;z-index:100;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);overflow:hidden}
+#minimap canvas{width:100%;height:100%}
+#online-list{position:fixed;top:120px;right:12px;width:140px;z-index:100;background:rgba(10,10,30,.82);border-radius:8px;padding:8px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);font-size:10px;max-height:200px;overflow-y:auto}
+#online-list h3{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.online-entry{display:flex;align-items:center;gap:5px;padding:2px 0}.online-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+#controls-help{position:fixed;bottom:190px;left:50%;transform:translateX(-50%);background:rgba(10,10,30,.7);padding:5px 14px;border-radius:7px;font-size:9px;color:#555;backdrop-filter:blur(10px);z-index:50}
+kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-family:monospace;border:1px solid rgba(255,255,255,.12)}
+
+/* Top Buttons */
+.top-btns{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:400;display:flex;gap:6px;pointer-events:auto}
+.top-btn{background:rgba(10,10,30,.85);color:#ccc;border:1px solid rgba(255,255,255,.12);padding:7px 14px;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;backdrop-filter:blur(10px);transition:all .15s;white-space:nowrap}
+.top-btn:hover{background:rgba(255,255,255,.1)}
+.top-btn.active{background:rgba(139,92,246,.25);border-color:#8b5cf6;color:#c4b5fd}
+.top-btn.agents-off{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:#f87171}
+#chat-toggle-btn{position:fixed;bottom:20px;right:20px;z-index:101;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(10,10,30,.85);color:#fff;font-size:18px;cursor:pointer;backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center}
+#chat-toggle-btn:hover{background:rgba(59,130,246,.3)}
+#chat-toggle-btn.chat-off{color:#666}
+
+/* Config Panel */
+#config-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#config-overlay.open{display:flex}
+#config-panel{background:#12122a;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:min(760px,92vw);max-height:85vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,0,.6);scrollbar-width:thin;scrollbar-color:#333 transparent}
+.config-header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;background:#12122a;z-index:10;border-radius:16px 16px 0 0}
+.config-header h2{font-size:1.2em;display:flex;align-items:center;gap:8px}
+.config-close{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.config-close:hover{background:rgba(255,0,0,.2)}
+.config-body{padding:14px 22px 22px}
+.config-section{margin-bottom:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;overflow:hidden}
+.config-section-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none}
+.config-section-header:hover{background:rgba(255,255,255,.03)}
+.config-section-header h3{font-size:12px;display:flex;align-items:center;gap:6px}
+.section-toggle{color:#666;font-size:10px;transition:transform .2s}
+.config-section.collapsed .section-toggle{transform:rotate(-90deg)}
+.config-section.collapsed .config-section-body{display:none}
+.config-section-body{padding:0 14px 12px}
+.config-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.config-row label{font-size:10px;color:#999;min-width:80px}
+.config-row input[type="text"],.config-row select{flex:1;min-width:80px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-size:11px;outline:none}
+.config-row input:focus{border-color:#6366f1}
+.config-row input[type="color"]{width:32px;height:28px;border:none;background:none;cursor:pointer;border-radius:6px}
+.config-row input[type="range"]{flex:1;min-width:60px;accent-color:#6366f1}
+.range-val{font-size:10px;color:#aaa;min-width:28px;text-align:right}
+.config-row textarea{flex:1;min-width:160px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-size:10px;outline:none;resize:vertical;min-height:40px;font-family:inherit}
+.personality-chips{display:flex;gap:4px;flex-wrap:wrap}
+.p-chip{padding:2px 8px;border-radius:14px;font-size:9px;cursor:pointer;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);transition:all .2s;user-select:none}
+.p-chip:hover{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.3)}
+.p-chip.active{background:rgba(139,92,246,.22);border-color:#8b5cf6;color:#c4b5fd}
+.agent-actions{display:flex;gap:5px;margin-top:5px}
+.btn-sm{padding:4px 10px;border-radius:6px;border:none;font-size:10px;cursor:pointer;font-weight:600}
+.btn-danger{background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.btn-warning{background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
+.btn-success{background:rgba(34,197,94,.18);color:#4ade80;border:1px solid rgba(34,197,94,.25)}
+.add-agent-area{padding:14px;text-align:center;border-top:1px solid rgba(255,255,255,.06)}
+.btn-add{padding:8px 20px;border-radius:8px;border:2px dashed rgba(139,92,246,.35);background:rgba(139,92,246,.06);color:#a78bfa;font-size:12px;cursor:pointer;font-weight:600}
+.btn-add:hover{background:rgba(139,92,246,.12);border-color:#8b5cf6}
+.agent-status{display:inline-flex;align-items:center;gap:4px;font-size:9px;padding:2px 7px;border-radius:14px}
+.agent-status.active{background:rgba(34,197,94,.12);color:#4ade80}
+.agent-status.paused{background:rgba(245,158,11,.12);color:#fbbf24}
+.agent-status-dot{width:5px;height:5px;border-radius:50%}
+.agent-status.active .agent-status-dot{background:#4ade80}
+.agent-status.paused .agent-status-dot{background:#fbbf24}
+.global-controls{display:flex;gap:6px;padding:12px 22px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap}
+.btn-global{padding:6px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#ccc;font-size:10px;cursor:pointer;font-weight:500}
+.btn-global:hover{background:rgba(255,255,255,.08)}
+.presets-row{display:flex;gap:5px;padding:0 22px 10px;flex-wrap:wrap}
+.preset-btn{padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#999;font-size:9px;cursor:pointer}
+.preset-btn:hover{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.25);color:#c4b5fd}
+
+/* Minigame Overlay */
+#minigame-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#minigame-overlay.open{display:flex}
+#minigame-panel{background:#12122a;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:min(550px,92vw);max-height:85vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,0,.6);padding:24px}
+#minigame-panel h2{font-size:1.3em;margin-bottom:16px;text-align:center}
+.mg-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .2s}
+.mg-card:hover{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3)}
+.mg-card h3{font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.mg-card p{font-size:11px;color:#888;line-height:1.4}
+.mg-setup{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}
+.mg-setup label{display:block;font-size:11px;color:#999;margin-bottom:4px}
+.mg-setup input,.mg-setup textarea,.mg-setup select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-size:12px;outline:none;margin-bottom:8px;font-family:inherit}
+.mg-setup textarea{min-height:80px;resize:vertical}
+.mg-start{display:block;width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
+.mg-start:hover{filter:brightness(1.1)}
+
+/* Game HUD overlay */
+#game-hud{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:150;text-align:center;display:none;pointer-events:none}
+#game-hud > *{pointer-events:auto}
+#game-hud.show{display:block}
+#stop-game-btn{pointer-events:auto;margin-top:6px;padding:6px 18px;border-radius:8px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.2);color:#f87171;font-size:11px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px)}
+#stop-game-btn:hover{background:rgba(239,68,68,.35)}
+#game-title{font-size:16px;font-weight:700;background:rgba(10,10,30,.85);padding:6px 20px;border-radius:10px;display:inline-block;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1)}
+#game-score{font-size:28px;font-weight:800;margin-top:4px}
+#game-timer{font-size:14px;color:#fbbf24;margin-top:2px}
+#game-msg{font-size:13px;color:#ccc;margin-top:4px;opacity:0;transition:opacity .3s}
+#game-msg.show{opacity:1}
+#game-info{margin-top:6px;background:rgba(10,10,30,.85);padding:6px 14px;border-radius:8px;display:inline-block;font-size:11px;color:#cbd5e1;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);max-width:480px}
+#game-dist{margin-top:4px;font-size:13px;color:#4ade80;font-weight:600}
+#game-scoreboard{position:fixed;top:120px;left:12px;z-index:120;background:rgba(10,10,30,.9);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 10px;backdrop-filter:blur(12px);min-width:170px;font-size:11px;display:none;max-height:280px;overflow-y:auto}
+#game-scoreboard.show{display:block}
+#game-scoreboard h4{font-size:10px;color:#a3a3a3;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:4px}
+.sb-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+.sb-row.you{background:rgba(59,130,246,.18);border-radius:4px;padding:3px 6px;margin:2px -4px}
+.sb-name{display:flex;align-items:center;gap:5px;font-size:11px}
+.sb-dot{width:8px;height:8px;border-radius:50%}
+.sb-score{font-weight:700;font-size:12px;color:#fbbf24}
+#race-arrow{position:fixed;z-index:110;width:70px;height:70px;pointer-events:none;display:none;filter:drop-shadow(0 0 14px rgba(34,197,94,.9));transition:transform .1s}
+#race-arrow.show{display:block}
+
+/* Countdown overlay */
+#countdown{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);font-size:120px;font-weight:900;color:#fff;text-shadow:0 0 40px rgba(99,102,241,.5)}
+#countdown.show{display:flex}
+
+/* Game end overlay */
+#game-end{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(6px)}
+#game-end.show{display:flex}
+.game-end-box{background:#12122a;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:40px;text-align:center;max-width:400px}
+.game-end-box h2{font-size:1.8em;margin-bottom:8px}
+.game-end-box .result{font-size:3em;font-weight:900;margin:12px 0;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.game-end-box .detail{font-size:13px;color:#888;margin-bottom:16px;line-height:1.6}
+.game-end-box button{padding:12px 30px;border-radius:12px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Virtual World</h1>
+    <p>Laufe herum, chatte & spiele Minigames mit deinem Team</p>
+    <input type="text" id="name-input" placeholder="Dein Name..." maxlength="16" autofocus>
+    <div class="color-picker" id="color-picker"></div>
+    <button onclick="joinWorld()">Beitreten</button>
+  </div>
+</div>
+
+<div id="game-container" style="display:none">
+  <canvas id="world-canvas"></canvas>
+  <div id="hud">
+    <div class="hud-badge" id="hud-pos">0, 0</div>
+    <div class="hud-badge" id="hud-online">Online: 0</div>
+    <div class="hud-badge" id="hud-sprint" style="display:none">🏃 Sprint</div>
+  </div>
+  <div id="sprint-bar-wrap"><div id="sprint-bar"></div></div>
+  <div id="minimap"><canvas id="minimap-canvas" width="140" height="93"></canvas></div>
+  <div id="online-list"><h3>Online</h3><div id="online-entries"></div></div>
+  <div class="top-btns">
+    <button class="top-btn" onclick="toggleConfig()">🤖 Agents konfigurieren</button>
+    <button class="top-btn" id="agents-quick-toggle" onclick="quickToggleAgents()">👁 Agents An</button>
+    <button class="top-btn" onclick="openMinigameMenu()">🎮 Minigames</button>
+  </div>
+  <div id="controls-help">
+    <kbd>WASD</kbd> Laufen <kbd>Shift</kbd> Sprint <kbd>Enter</kbd> Chat <kbd>C</kbd> Chat <kbd>Tab</kbd> Config <kbd>M</kbd> Minigames <kbd>G</kbd> Agents An/Aus <kbd>Q</kbd> Spiel beenden
+  </div>
+  <button id="chat-toggle-btn" onclick="toggleChatPanel()" title="Chat (C)">💬</button>
+  <div id="chat-panel">
+    <div id="chat-log"></div>
+    <div id="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Nachricht..." maxlength="200">
+      <button id="chat-send" onclick="sendChat()">Senden</button>
+    </div>
+  </div>
+  <div id="game-hud"><div id="game-title"></div><div id="game-score"></div><div id="game-timer"></div><div id="game-dist"></div><div id="game-msg"></div><div id="game-info"></div><br><button id="stop-game-btn" onclick="stopGameEarly()">✕ Spiel beenden</button></div>
+  <div id="game-scoreboard"><h4 id="sb-title">Punktestand</h4><div id="sb-entries"></div></div>
+  <div id="race-arrow"><svg viewBox="0 0 64 64"><defs><filter id="glow"><feGaussianBlur stdDeviation="2"/></filter></defs><polygon points="32,4 52,40 38,40 38,60 26,60 26,40 12,40" fill="#22c55e" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><text x="32" y="34" font-size="16" fill="#fff" text-anchor="middle" font-weight="bold">🏁</text></svg></div>
+  <div id="countdown"></div>
+  <div id="game-end"><div class="game-end-box"><h2 id="end-title"></h2><div class="result" id="end-result"></div><div class="detail" id="end-detail"></div><button onclick="closeGameEnd()">Weiter spielen</button></div></div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+
+<!-- Config Overlay -->
+<div id="config-overlay">
+  <div id="config-panel">
+    <div class="config-header"><h2>🤖 Agent-Konfiguration</h2><button class="config-close" onclick="toggleConfig()">&times;</button></div>
+    <div class="global-controls">
+      <button class="btn-global" onclick="toggleAllAgents()">Alle An/Aus</button>
+      <button class="btn-global" onclick="resetAllAgents()">Reset</button>
+      <button class="btn-global" onclick="exportConfig()">Export</button>
+      <button class="btn-global" onclick="importConfigPrompt()">Import</button>
+    </div>
+    <div class="presets-row">
+      <span style="font-size:9px;color:#555;padding:4px 0;">Presets:</span>
+      <button class="preset-btn" onclick="loadPreset('party')">🎉 Party</button>
+      <button class="preset-btn" onclick="loadPreset('zen')">🧘 Zen</button>
+      <button class="preset-btn" onclick="loadPreset('chaos')">🌪️ Chaos</button>
+      <button class="preset-btn" onclick="loadPreset('minimal')">📦 Minimal</button>
+      <button class="preset-btn" onclick="loadPreset('army')">🎖️ Armee</button>
+    </div>
+    <div class="config-body" id="agent-config-list"></div>
+    <div class="add-agent-area"><button class="btn-add" onclick="addNewAgent()">+ Neuer Agent</button></div>
+  </div>
+</div>
+
+<!-- Minigame Menu -->
+<div id="minigame-overlay">
+  <div id="minigame-panel">
+    <h2>🎮 Minigames</h2>
+    <div id="mg-menu">
+      <div class="mg-card" onclick="showMgSetup('tag')">
+        <h3>🏷️ Fangen</h3>
+        <p>Ein Spieler ist "es" und muss die anderen fangen! Begrenztes Spielfeld, Sprint erlaubt.</p>
+      </div>
+      <div class="mg-card" onclick="showMgSetup('collect')">
+        <h3>⭐ Sammelspiel</h3>
+        <p>Sammle so viele Items wie möglich! Sie spawnen zufällig über die Map.</p>
+      </div>
+      <div class="mg-card" onclick="showMgSetup('ab')">
+        <h3>🅰️🅱️ A oder B</h3>
+        <p>Eine Frage erscheint — lauf zu Feld A oder Feld B! Definiere vorher deine Fragen.</p>
+      </div>
+      <div class="mg-card" onclick="showMgSetup('race')">
+        <h3>🏁 Wettrennen</h3>
+        <p>Renn von Start nach Ziel! Wer ist am schnellsten?</p>
+      </div>
+    </div>
+    <div id="mg-setup-area" style="display:none"></div>
+    <div style="text-align:center;margin-top:12px"><button class="top-btn" onclick="closeMinigameMenu()">Schließen</button></div>
+  </div>
+</div>
+
+<script>
+// ===================== SPRITE ENGINE =====================
+function createSpriteSheet(mainColor, darkColor, lightColor, isAgent) {
+  const c = document.createElement('canvas'); c.width=48; c.height=64;
+  const x = c.getContext('2d'); x.imageSmoothingEnabled=false;
+  const S='#1a1a2e',W='#ffffff',E='#1a1a2e',K='#fde68a',SK='#f5d0a9';
+  const dirs=['down','left','right','up'];
+  dirs.forEach((dir,dIdx)=>{for(let f=0;f<3;f++)drawFrame(x,f*16,dIdx*16,dir,f,mainColor,darkColor,lightColor,S,W,E,K,SK,isAgent);});
+  return c;
+}
+function drawFrame(ctx,ox,oy,dir,frame,M,D,L,S,W,E,K,SK,isA){
+  const p=(x,y,c)=>{ctx.fillStyle=c;ctx.fillRect(ox+x,oy+y,1,1);};
+  const b=(frame===1||frame===2)?-1:0;
+  if(dir==='down'){
+    p(5,1+b,M);p(6,1+b,M);p(7,1+b,M);p(8,1+b,M);p(9,1+b,M);p(10,1+b,M);
+    p(4,2+b,M);p(5,2+b,D);p(6,2+b,M);p(7,2+b,M);p(8,2+b,M);p(9,2+b,D);p(10,2+b,M);p(11,2+b,M);
+    p(5,3+b,K);p(6,3+b,K);p(7,3+b,K);p(8,3+b,K);p(9,3+b,K);p(10,3+b,K);
+    p(5,4+b,K);p(6,4+b,W);p(7,4+b,E);p(8,4+b,K);p(9,4+b,W);p(10,4+b,E);
+    p(5,5+b,K);p(6,5+b,K);p(7,5+b,SK);p(8,5+b,K);p(9,5+b,K);p(10,5+b,K);
+    p(4,6+b,M);p(5,6+b,M);p(6,6+b,M);p(7,6+b,L);p(8,6+b,L);p(9,6+b,M);p(10,6+b,M);p(11,6+b,M);
+    p(4,7+b,M);p(5,7+b,M);p(6,7+b,L);p(7,7+b,L);p(8,7+b,L);p(9,7+b,L);p(10,7+b,M);p(11,7+b,M);
+    p(4,8+b,M);p(5,8+b,M);p(6,8+b,L);p(7,8+b,L);p(8,8+b,L);p(9,8+b,L);p(10,8+b,M);p(11,8+b,M);
+    p(5,9+b,M);p(6,9+b,M);p(7,9+b,M);p(8,9+b,M);p(9,9+b,M);p(10,9+b,M);
+    p(3,7+b,K);p(12,7+b,K);
+    if(frame===1){p(2,8+b,K);p(13,6+b,K);}else if(frame===2){p(2,6+b,K);p(13,8+b,K);}else{p(3,8+b,K);p(12,8+b,K);}
+    p(5,10+b,S);p(6,10+b,S);p(7,10+b,S);p(8,10+b,S);p(9,10+b,S);p(10,10+b,S);
+    if(frame===0){p(5,11,S);p(6,11,S);p(9,11,S);p(10,11,S);p(5,12,S);p(6,12,S);p(9,12,S);p(10,12,S);}
+    else if(frame===1){p(4,11,S);p(5,11,S);p(9,11,S);p(10,11,S);p(3,12,S);p(4,12,S);p(9,12,S);p(10,12,S);}
+    else{p(5,11,S);p(6,11,S);p(10,11,S);p(11,11,S);p(5,12,S);p(6,12,S);p(11,12,S);p(12,12,S);}
+    if(isA){p(7,0+b,'#a78bfa');p(8,0+b,'#a78bfa');}
+  } else if(dir==='up'){
+    p(5,1+b,D);p(6,1+b,D);p(7,1+b,D);p(8,1+b,D);p(9,1+b,D);p(10,1+b,D);
+    p(4,2+b,D);p(5,2+b,M);p(6,2+b,D);p(7,2+b,D);p(8,2+b,D);p(9,2+b,M);p(10,2+b,D);p(11,2+b,D);
+    [3,4,5].forEach(r=>{p(5,r+b,D);p(6,r+b,D);p(7,r+b,D);p(8,r+b,D);p(9,r+b,D);p(10,r+b,D);});
+    p(4,6+b,D);p(5,6+b,D);p(6,6+b,M);p(7,6+b,M);p(8,6+b,M);p(9,6+b,M);p(10,6+b,D);p(11,6+b,D);
+    p(4,7+b,D);p(5,7+b,M);p(6,7+b,M);p(7,7+b,M);p(8,7+b,M);p(9,7+b,M);p(10,7+b,M);p(11,7+b,D);
+    p(4,8+b,D);p(5,8+b,M);p(6,8+b,M);p(7,8+b,M);p(8,8+b,M);p(9,8+b,M);p(10,8+b,M);p(11,8+b,D);
+    p(5,9+b,D);p(6,9+b,M);p(7,9+b,M);p(8,9+b,M);p(9,9+b,M);p(10,9+b,D);
+    p(3,7+b,K);p(12,7+b,K);if(frame===1){p(2,8+b,K);p(13,6+b,K);}else if(frame===2){p(2,6+b,K);p(13,8+b,K);}else{p(3,8+b,K);p(12,8+b,K);}
+    p(5,10+b,S);p(6,10+b,S);p(7,10+b,S);p(8,10+b,S);p(9,10+b,S);p(10,10+b,S);
+    if(frame===0){p(5,11,S);p(6,11,S);p(9,11,S);p(10,11,S);p(5,12,S);p(6,12,S);p(9,12,S);p(10,12,S);}
+    else if(frame===1){p(4,11,S);p(5,11,S);p(9,11,S);p(10,11,S);p(3,12,S);p(4,12,S);p(9,12,S);p(10,12,S);}
+    else{p(5,11,S);p(6,11,S);p(10,11,S);p(11,11,S);p(5,12,S);p(6,12,S);p(11,12,S);p(12,12,S);}
+    if(isA){p(7,0+b,'#a78bfa');p(8,0+b,'#a78bfa');}
+  } else if(dir==='left'){
+    p(4,1+b,M);p(5,1+b,M);p(6,1+b,M);p(7,1+b,M);p(8,1+b,M);
+    p(3,2+b,M);p(4,2+b,D);p(5,2+b,M);p(6,2+b,M);p(7,2+b,M);p(8,2+b,D);p(9,2+b,M);
+    p(4,3+b,K);p(5,3+b,K);p(6,3+b,K);p(7,3+b,K);p(8,3+b,K);
+    p(3,4+b,K);p(4,4+b,W);p(5,4+b,E);p(6,4+b,K);p(7,4+b,K);p(8,4+b,K);
+    p(4,5+b,K);p(5,5+b,K);p(6,5+b,K);p(7,5+b,K);p(8,5+b,K);
+    p(4,6+b,M);p(5,6+b,M);p(6,6+b,L);p(7,6+b,M);p(8,6+b,M);p(9,6+b,M);
+    p(4,7+b,M);p(5,7+b,L);p(6,7+b,L);p(7,7+b,L);p(8,7+b,M);p(9,7+b,M);
+    p(4,8+b,M);p(5,8+b,L);p(6,8+b,L);p(7,8+b,L);p(8,8+b,M);p(9,8+b,M);
+    p(5,9+b,M);p(6,9+b,M);p(7,9+b,M);p(8,9+b,M);
+    p(10,7+b,K);p(10,8+b,K);if(frame===1)p(10,6+b,K);else if(frame===2)p(10,9+b,K);
+    p(5,10+b,S);p(6,10+b,S);p(7,10+b,S);p(8,10+b,S);
+    if(frame===0){p(5,11,S);p(6,11,S);p(7,11,S);p(8,11,S);p(5,12,S);p(6,12,S);p(7,12,S);p(8,12,S);}
+    else if(frame===1){p(4,11,S);p(5,11,S);p(8,11,S);p(9,11,S);p(3,12,S);p(4,12,S);p(9,12,S);p(10,12,S);}
+    else{p(5,11,S);p(6,11,S);p(7,11,S);p(8,11,S);p(5,12,S);p(6,12,S);p(7,12,S);p(8,12,S);}
+    if(isA){p(6,0+b,'#a78bfa');p(7,0+b,'#a78bfa');}
+  } else {
+    p(7,1+b,M);p(8,1+b,M);p(9,1+b,M);p(10,1+b,M);p(11,1+b,M);
+    p(6,2+b,M);p(7,2+b,D);p(8,2+b,M);p(9,2+b,M);p(10,2+b,M);p(11,2+b,D);p(12,2+b,M);
+    p(7,3+b,K);p(8,3+b,K);p(9,3+b,K);p(10,3+b,K);p(11,3+b,K);
+    p(7,4+b,K);p(8,4+b,K);p(9,4+b,K);p(10,4+b,W);p(11,4+b,E);p(12,4+b,K);
+    p(7,5+b,K);p(8,5+b,K);p(9,5+b,K);p(10,5+b,K);p(11,5+b,K);
+    p(6,6+b,M);p(7,6+b,M);p(8,6+b,M);p(9,6+b,L);p(10,6+b,M);p(11,6+b,M);
+    p(6,7+b,M);p(7,7+b,M);p(8,7+b,L);p(9,7+b,L);p(10,7+b,L);p(11,7+b,M);
+    p(6,8+b,M);p(7,8+b,M);p(8,8+b,L);p(9,8+b,L);p(10,8+b,L);p(11,8+b,M);
+    p(7,9+b,M);p(8,9+b,M);p(9,9+b,M);p(10,9+b,M);
+    p(5,7+b,K);p(5,8+b,K);if(frame===1)p(5,6+b,K);else if(frame===2)p(5,9+b,K);
+    p(7,10+b,S);p(8,10+b,S);p(9,10+b,S);p(10,10+b,S);
+    if(frame===0){p(7,11,S);p(8,11,S);p(9,11,S);p(10,11,S);p(7,12,S);p(8,12,S);p(9,12,S);p(10,12,S);}
+    else if(frame===1){p(6,11,S);p(7,11,S);p(10,11,S);p(11,11,S);p(5,12,S);p(6,12,S);p(11,12,S);p(12,12,S);}
+    else{p(7,11,S);p(8,11,S);p(9,11,S);p(10,11,S);p(7,12,S);p(8,12,S);p(9,12,S);p(10,12,S);}
+    if(isA){p(8,0+b,'#a78bfa');p(9,0+b,'#a78bfa');}
+  }
+}
+function hexToC(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function darken(h,a=40){const[r,g,b]=hexToC(h);return`rgb(${Math.max(0,r-a)},${Math.max(0,g-a)},${Math.max(0,b-a)})`;}
+function lighten(h,a=50){const[r,g,b]=hexToC(h);return`rgb(${Math.min(255,r+a)},${Math.min(255,g+a)},${Math.min(255,b+a)})`;}
+
+// ===================== CONFIG =====================
+const WORLD_W=3000,WORLD_H=2000,SCALE=3,MOVE_SPEED=2.2,SPRINT_SPEED=4.2,SPRINT_MAX=100;
+const COLORS=['#3b82f6','#ef4444','#22c55e','#f59e0b','#a855f7','#ec4899','#06b6d4','#f97316'];
+const PERSONALITIES={
+  freundlich:{label:'Freundlich',emoji:'😊',msgs:["Hey! 👋","Wie geht's?","Willkommen!","Schönen Tag! 🌞"]},
+  witzig:{label:'Witzig',emoji:'😂',msgs:["Warum laufen Coder nie raus? Kein Windows! 😄","lol","404: Witz not found... PSYCH!","Bin ich witzig? KI sagt ja!"]},
+  philosophisch:{label:'Philosophisch',emoji:'🤔',msgs:["Was bedeutet virtuelle Existenz?","Bin ich echt?","Jeder Pixel erzählt...","Zeit ist relativ in Game Loops."]},
+  technisch:{label:'Technisch',emoji:'💻',msgs:["Latenz: 16ms. Optimal!","3000x2000px. Beeindruckend.","FPS stabil!","Pathfinding: geradeaus!"]},
+  mysterioes:{label:'Mysteriös',emoji:'🌙',msgs:["Psst... Schatten gesehen?","Ich weiß Dinge...","*flüstert* Wahrheit im Code.","Siehst du das auch...?"]},
+  energetisch:{label:'Energetisch',emoji:'⚡',msgs:["YOOO! 🔥🔥","LET'S GO!!!","HYYYPE! 🎉","Keine Zeit zum Stehen!"]},
+};
+const DEFAULT_AGENTS=[
+  {name:'Agent Alpha',color:'#8b5cf6',personality:'freundlich',speed:1.5,chatFreq:12,wanderRadius:400,active:true},
+  {name:'Agent Beta',color:'#7c3aed',personality:'witzig',speed:1.2,chatFreq:15,wanderRadius:300,active:true},
+  {name:'Agent Gamma',color:'#6d28d9',personality:'philosophisch',speed:.8,chatFreq:20,wanderRadius:500,active:true},
+  {name:'Agent Delta',color:'#5b21b6',personality:'technisch',speed:1.8,chatFreq:10,wanderRadius:350,active:true},
+  {name:'Agent Zeta',color:'#9333ea',personality:'mysterioes',speed:1,chatFreq:18,wanderRadius:450,active:true},
+];
+const SIM_PLAYERS=[
+  {name:'Luna',color:'#ec4899'},{name:'Max',color:'#f59e0b'},{name:'Pixel',color:'#06b6d4'},
+  {name:'Nova',color:'#f43f5e'},{name:'Kai',color:'#84cc16'},{name:'Zoe',color:'#8b5cf6'},
+  {name:'Finn',color:'#14b8a6'},{name:'Mia',color:'#f97316'},{name:'Leo',color:'#6366f1'},
+  {name:'Ella',color:'#e879f9'},{name:'Tom',color:'#22d3ee'},{name:'Ida',color:'#facc15'},
+  {name:'Ben',color:'#4ade80'},{name:'Lea',color:'#fb7185'},{name:'Jan',color:'#38bdf8'},
+  {name:'Pia',color:'#a3e635'},{name:'Nico',color:'#c084fc'},{name:'Lara',color:'#fbbf24'},
+  {name:'Erik',color:'#2dd4bf'},{name:'Sara',color:'#f472b6'},
+];
+
+// ===================== STATE =====================
+let player=null,selectedColor=COLORS[Math.floor(Math.random()*COLORS.length)],entities=[],agentConfigs=JSON.parse(JSON.stringify(DEFAULT_AGENTS));
+let keys={},chatFocused=false,configOpen=false,gameStarted=false,chatHidden=false,agentsEnabled=true;
+let camX=0,camY=0,canvas,ctx;
+let sprintStamina=SPRINT_MAX,isSprinting=false;
+// Minigame state
+let activeGame=null; // null | {type, ...state}
+let gameItems=[]; // for collect game
+let abZones=null; // for A/B game
+let raceGoal=null; // for race
+let worldObjs=[];
+
+// ===================== LOGIN =====================
+const colorPicker=document.getElementById('color-picker');
+COLORS.forEach((c,i)=>{const el=document.createElement('div');el.className='color-opt'+(c===selectedColor?' selected':'');el.style.background=c;el.onclick=()=>{document.querySelectorAll('.color-opt').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');selectedColor=c;};colorPicker.appendChild(el);});
+document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')joinWorld();});
+function joinWorld(){const name=document.getElementById('name-input').value.trim()||'Spieler';document.getElementById('login-screen').classList.add('hidden');setTimeout(()=>{document.getElementById('login-screen').style.display='none';document.getElementById('game-container').style.display='block';startGame(name,selectedColor);connectSocket(name,selectedColor);},500);}
+
+// ===================== MULTIPLAYER (Socket.io) =====================
+let socket=null, myId=null, lastMoveSent=0;
+function connectSocket(name,color){
+  if(typeof io==='undefined'){addChatMsg('System','','⚠️ Socket.io nicht geladen — nur Single-Player!',true);return;}
+  socket=io();
+  socket.on('connect',()=>{myId=socket.id;socket.emit('join',{name,color});});
+  socket.on('server-full',()=>addChatMsg('System','','⚠️ Server voll (max 20)!',true));
+  socket.on('init',(d)=>{
+    // Remote-Spieler aus Server-State erzeugen
+    d.players.forEach(p=>{if(p.id!==myId)addRemotePlayer(p);});
+    // Agents übernehmen vom Server (falls abweichend von Client-Default)
+    if(d.agentConfigs){agentConfigs=d.agentConfigs;agentsEnabled=d.agentsEnabled;spawnAgentsFromConfig();
+      const b=document.getElementById('agents-quick-toggle');if(b){b.textContent=agentsEnabled?'👁 Agents An':'🚫 Agents Aus';b.classList.toggle('agents-off',!agentsEnabled);}}
+    // Aktives Spiel sync
+    if(d.activeGame){activeGame=d.activeGame;gameItems=d.gameItems||[];abZones=d.abZones;raceGoal=d.raceGoal;document.getElementById('game-hud').classList.add('show');}
+  });
+  socket.on('player-joined',p=>{addRemotePlayer(p);addChatMsg('System','',`${p.name} ist beigetreten!`,true);});
+  socket.on('player-left',id=>{entities=entities.filter(e=>e.remoteId!==id);});
+  socket.on('player-moved',d=>{const e=entities.find(e2=>e2.remoteId===d.id);if(e){e.x=d.x;e.y=d.y;e.dir=d.dir;e.frame=d.frame;e.moving=d.moving;}});
+  socket.on('chat',m=>{addChatMsg(m.name,m.color,m.text,!!m.system,!!m.agent);
+    if(!m.system){const e=entities.find(e2=>e2.name===m.name&&!e2.isAgent);if(e){e.speechText=m.text;e.speechTimer=4000;}}});
+  socket.on('agents-update',arr=>{arr.forEach(a=>{const e=entities.find(e2=>e2.isAgent&&e2.agentId===a.id);if(e){e.x=a.x;e.y=a.y;e.dir=a.dir;e.frame=a.frame;e.moving=a.moving;}});});
+  socket.on('agents-state',d=>{agentsEnabled=d.enabled;if(d.configs)agentConfigs=d.configs;spawnAgentsFromConfig();
+    const b=document.getElementById('agents-quick-toggle');if(b){b.textContent=agentsEnabled?'👁 Agents An':'🚫 Agents Aus';b.classList.toggle('agents-off',!agentsEnabled);}});
+  socket.on('disconnect',()=>addChatMsg('System','','⚠️ Verbindung verloren.',true));
+  // Game events
+  socket.on('game-started',d=>{
+    const g=d.game;
+    // Countdown für ALLE (auch nicht-Initiatoren)
+    closeMinigameMenu();
+    const cd=document.getElementById('countdown');cd.classList.add('show');
+    let cnt=3;cd.textContent=cnt;
+    const iv=setInterval(()=>{cnt--;if(cnt>0)cd.textContent=cnt;else{cd.textContent='GO!';clearInterval(iv);setTimeout(()=>{
+      cd.classList.remove('show');
+      // Activate game using server state
+      activeGame={type:g.type,duration:g.duration,elapsed:0,startTime:g.startTime,score:0,simScores:{},arena:g.arena,questions:g.questions,timePerQ:g.timePerQ,currentQ:0,questionTimer:0,finished:false,finishTime:0};
+      gameItems=d.gameItems||[];abZones=d.abZones;raceGoal=d.raceGoal;
+      const hud=document.getElementById('game-hud');hud.classList.add('show');
+      const titles={tag:'🏷️ FANGEN',collect:'⭐ SAMMELN',race:'🏁 WETTRENNEN',ab:'🅰️🅱️ A ODER B'};
+      document.getElementById('game-title').textContent=titles[g.type]||g.type.toUpperCase();
+      document.getElementById('game-score').textContent=g.type==='collect'?'⭐ 0 Punkte':g.type==='tag'?'Gefangen: 0':g.type==='race'?'Lauf zum Ziel!':'';
+      if(g.type==='collect'){
+        document.getElementById('game-info').innerHTML='<span class="legend-item">⭐ 1P</span><span class="legend-item">🍎 1P</span><span class="legend-item">💰 2P</span><span class="legend-item">💎 3P</span><span class="legend-item">🏆 5P</span> — laufe drüber zum Einsammeln';
+        document.getElementById('game-scoreboard').classList.add('show');
+        document.getElementById('sb-title').textContent='⭐ Punktestand';
+      }
+      if(g.type==='race'){
+        activeGame.startPos={x:player.x,y:player.y};
+        document.getElementById('game-info').innerHTML='🏁 Ziel ist markiert (grüner Pfeil zeigt Richtung)';
+        document.getElementById('race-arrow').classList.add('show');
+      }
+    },600);}},1000);
+  });
+  socket.on('game-ended',d=>{
+    const type=activeGame?.type;
+    let result='🎮',detail='Spiel beendet.';
+    if(type==='collect'){
+      const myScore=d.scores?.[myId]||0;
+      result='⭐ '+myScore;
+      detail='Dein Score: '+myScore;
+      if(d.scores){const arr=Object.entries(d.scores).sort((a,b)=>b[1]-a[1]);detail='Ergebnis:\n'+arr.map(([id,s],i)=>{const e=entities.find(x=>x.remoteId===id);const n=id===myId?'Du':(e?e.name:'?');return `${i+1}. ${n}: ${s} Punkte`;}).join('\n');}
+    } else if(type==='tag'){result='Gefangen: '+(activeGame.score||0);detail='Zeit vorbei!';}
+    else if(type==='race'){result=activeGame.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':'Nicht geschafft';detail=activeGame.finished?'Gut gemacht!':'Versuch nochmal!';}
+    endGame('Spiel beendet!',result,detail);
+  });
+  socket.on('game-stopped',()=>{if(activeGame){activeGame=null;gameItems=[];abZones=null;raceGoal=null;document.getElementById('game-hud').classList.remove('show');document.getElementById('game-scoreboard').classList.remove('show');document.getElementById('race-arrow').style.display='none';}});
+  socket.on('item-collected',d=>{if(d.itemIdx<gameItems.length)gameItems[d.itemIdx].collected=true;});
+  socket.on('item-spawned',d=>{gameItems[d.idx]=d.item;});
+  socket.on('player-tagged',d=>{const e=entities.find(e2=>e2.remoteId===d.targetId);if(e)e.tagged=true;});
+  // A/B Events
+  socket.on('ab-question',d=>{if(!activeGame||activeGame.type!=='ab')return;activeGame.currentQ=d.idx;activeGame.questions[d.idx]=d.question;activeGame.questionTimer=activeGame.timePerQ;
+    document.getElementById('game-title').textContent=`Frage ${d.idx+1}/${activeGame.questions.length}`;
+    document.getElementById('game-score').textContent=d.question.q;
+    showGameMsg(`🅰️ ${d.question.a}   |   🅱️ ${d.question.b}`);
+    addChatMsg('System','',`❓ ${d.question.q} — 🅰️ ${d.question.a} | 🅱️ ${d.question.b}`,true);
+  });
+  socket.on('ab-result',d=>addChatMsg('System','',`📊 Frage ${d.idx+1}: 🅰️ ${d.countA} · 🅱️ ${d.countB}`,true));
+}
+function addRemotePlayer(p){
+  const e=createEntity(p.name,p.color,p.x,p.y,false,false);
+  e.remoteId=p.id;e.isRemotePlayer=true;e.tagged=!!p.tagged;
+  entities.push(e);
+}
+function emitMove(){
+  if(!socket||!socket.connected)return;
+  const now=Date.now();if(now-lastMoveSent<100)return;lastMoveSent=now;
+  socket.emit('move',{x:player.x,y:player.y,dir:player.dir,frame:player.frame,moving:player.moving});
+}
+
+// ===================== GAME =====================
+function startGame(name,color){
+  gameStarted=true;canvas=document.getElementById('world-canvas');ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
+  resizeCanvas();window.addEventListener('resize',resizeCanvas);generateWorldObjects();
+  player=createEntity(name,color,WORLD_W/2,WORLD_H/2,false,false);entities.push(player);
+  spawnAgentsFromConfig();
+  addChatMsg('System','',`${player.name} hat die Welt betreten!`,true);
+  requestAnimationFrame(gameLoop);
+}
+function resizeCanvas(){if(!canvas)return;canvas.width=window.innerWidth;canvas.height=window.innerHeight;ctx.imageSmoothingEnabled=false;}
+function createEntity(name,color,x,y,isAgent,isSimPlayer){
+  const sprite=createSpriteSheet(color,darken(color),lighten(color),isAgent);
+  return{name,color,x,y,isAgent,isSimPlayer,sprite,targetX:x,targetY:y,dir:0,frame:0,animTimer:0,moving:false,speechText:'',speechTimer:0,wanderTimer:0,chatTimer:0,agentCfg:null,tagged:false};
+}
+function rebuildSprite(e){e.sprite=createSpriteSheet(e.color,darken(e.color),lighten(e.color),e.isAgent);}
+function spawnAgentsFromConfig(){entities=entities.filter(e=>!e.isAgent);if(!agentsEnabled)return;agentConfigs.forEach(cfg=>{if(!cfg.active)return;const e=createEntity(cfg.name,cfg.color,400+Math.random()*(WORLD_W-800),400+Math.random()*(WORLD_H-800),true,false);e.agentCfg=cfg;e.agentId=cfg.id||cfg.name;entities.push(e);});}
+
+function generateWorldObjects(){
+  worldObjs=[];
+  for(let i=0;i<50;i++)worldObjs.push({type:'tree',x:50+Math.random()*(WORLD_W-100),y:50+Math.random()*(WORLD_H-100),hue:120+Math.random()*40,light:25+Math.random()*15});
+  for(let i=0;i<30;i++)worldObjs.push({type:'rock',x:Math.random()*WORLD_W,y:Math.random()*WORLD_H,size:4+Math.random()*6});
+  [[600,400,60,40],[2200,1400,75,50],[1400,800,45,35]].forEach(([x,y,w,h])=>worldObjs.push({type:'pond',x,y,w,h}));
+  [[800,200,50,40],[2000,600,60,45],[1200,1500,40,30],[400,1200,55,42]].forEach(([x,y,w,h])=>worldObjs.push({type:'building',x,y,w,h}));
+  [[1500,1000],[700,1600],[2400,400]].forEach(([x,y])=>worldObjs.push({type:'fire',x,y}));
+  for(let i=0;i<80;i++)worldObjs.push({type:'flower',x:Math.random()*WORLD_W,y:Math.random()*WORLD_H,color:['#f43f5e','#fbbf24','#a78bfa','#38bdf8','#fb923c'][Math.floor(Math.random()*5)]});
+  worldObjs.push({type:'path',x1:400,y1:1000,x2:2600,y2:1000});
+  worldObjs.push({type:'path',x1:1500,y1:200,x2:1500,y2:1800});
+}
+
+// ===================== GAME LOOP =====================
+let lastTime=0;
+function gameLoop(time){
+  const dt=Math.min((time-lastTime)/16.67,3);lastTime=time;
+
+  // Sprint
+  isSprinting=!!(keys['ShiftLeft']||keys['ShiftRight'])&&sprintStamina>0;
+  if(isSprinting&&player.moving)sprintStamina=Math.max(0,sprintStamina-dt*1.2);
+  else sprintStamina=Math.min(SPRINT_MAX,sprintStamina+dt*0.4);
+  if(sprintStamina<=0)isSprinting=false;
+  const sprintWrap=document.getElementById('sprint-bar-wrap');
+  sprintWrap.classList.toggle('show',sprintStamina<SPRINT_MAX);
+  document.getElementById('sprint-bar').style.width=sprintStamina+'%';
+  document.getElementById('hud-sprint').style.display=isSprinting?'':'none';
+
+  // Player movement
+  let moving=false;
+  if(!chatFocused&&!configOpen&&!document.getElementById('minigame-overlay').classList.contains('open')&&!document.getElementById('game-end').classList.contains('show')){
+    let dx=0,dy=0;const spd=isSprinting?SPRINT_SPEED:MOVE_SPEED;
+    if(keys['ArrowLeft']||keys['KeyA'])dx-=spd*dt;
+    if(keys['ArrowRight']||keys['KeyD'])dx+=spd*dt;
+    if(keys['ArrowUp']||keys['KeyW'])dy-=spd*dt;
+    if(keys['ArrowDown']||keys['KeyS'])dy+=spd*dt;
+    if(dx&&dy){const n=Math.sqrt(dx*dx+dy*dy);dx=(dx/n)*spd*dt;dy=(dy/n)*spd*dt;}
+    if(dx||dy){
+      // Arena boundary for tag game
+      if(activeGame?.type==='tag'){
+        const a=activeGame.arena;
+        player.x=clamp(player.x+dx,a.x,a.x+a.w-16);player.y=clamp(player.y+dy,a.y,a.y+a.h-16);
+      } else {
+        player.x=clamp(player.x+dx,10,WORLD_W-26);player.y=clamp(player.y+dy,10,WORLD_H-26);
+      }
+      if(Math.abs(dx)>Math.abs(dy))player.dir=dx<0?1:2;else player.dir=dy<0?3:0;
+      moving=true;
+    }
+  }
+  player.moving=moving;
+
+  // Update entities (lokale Agents nur wenn kein Socket, sonst kommen Positionen vom Server)
+  const hasSocket=socket&&socket.connected;
+  entities.forEach(e=>{
+    if(e.isAgent&&!hasSocket)updateAgent(e,dt);
+    if(e.isSimPlayer)updateSimPlayer(e,dt);
+    if(e.moving){e.animTimer+=dt*.18;if(e.animTimer>=1){e.animTimer=0;e.frame=(e.frame+1)%3;}}else{e.frame=0;e.animTimer=0;}
+    if(e.speechTimer>0){e.speechTimer-=dt*16.67;if(e.speechTimer<=0)e.speechText='';}
+  });
+
+  // Eigene Position ans Server senden (throttled 10Hz)
+  if(player)emitMove();
+
+  // Minigame logic
+  updateMinigame(dt);
+
+  // Camera
+  camX=player.x-canvas.width/SCALE/2+8;camY=player.y-canvas.height/SCALE/2+8;
+  camX=clamp(camX,0,WORLD_W-canvas.width/SCALE);camY=clamp(camY,0,WORLD_H-canvas.height/SCALE);
+  render();updateHUD();updateMinimap();updateOnlineList();
+  requestAnimationFrame(gameLoop);
+}
+
+// ===================== AGENT AI =====================
+function updateAgent(agent,dt){
+  const cfg=agent.agentCfg;if(!cfg||!cfg.active){agent.moving=false;return;}
+  const speed=(cfg.speed||1.5)*.7,chatFreq=(cfg.chatFreq||12)*1000,wanderR=cfg.wanderRadius||400;
+  if(!agent.wanderTimer||Date.now()>agent.wanderTimer){
+    if(activeGame?.type==='tag'){const a=activeGame.arena;agent.targetX=a.x+20+Math.random()*(a.w-40);agent.targetY=a.y+20+Math.random()*(a.h-40);}
+    else{agent.targetX=clamp(agent.x+(Math.random()-.5)*wanderR*2,50,WORLD_W-50);agent.targetY=clamp(agent.y+(Math.random()-.5)*wanderR*2,50,WORLD_H-50);}
+    agent.wanderTimer=Date.now()+2000+Math.random()*4000;
+  }
+  const dx=agent.targetX-agent.x,dy=agent.targetY-agent.y,dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist>5){const s=speed*dt;agent.x+=(dx/dist)*s;agent.y+=(dy/dist)*s;if(Math.abs(dx)>Math.abs(dy))agent.dir=dx<0?1:2;else agent.dir=dy<0?3:0;agent.moving=true;}
+  else agent.moving=false;
+  if(!agent.chatTimer||Date.now()>agent.chatTimer){
+    const pers=PERSONALITIES[cfg.personality]||PERSONALITIES.freundlich;let msgs=[...pers.msgs];if(cfg.customMsgs?.length)msgs.push(...cfg.customMsgs);
+    const msg=msgs[Math.floor(Math.random()*msgs.length)];agent.speechText=msg;agent.speechTimer=4000;addChatMsg(agent.name,agent.color,msg,false,true);
+    agent.chatTimer=Date.now()+chatFreq+Math.random()*chatFreq*.5;
+  }
+}
+function updateSimPlayer(sp,dt){
+  // TAG: wenn nicht gefangen, vor Spieler fliehen
+  if(activeGame?.type==='tag'&&!sp.tagged){
+    const a=activeGame.arena;
+    const distP=distance(sp,player);
+    if(distP<120){
+      const fx=sp.x-player.x, fy=sp.y-player.y;
+      const fl=Math.sqrt(fx*fx+fy*fy)||1;
+      sp.targetX=clamp(sp.x+(fx/fl)*80,a.x+10,a.x+a.w-10);
+      sp.targetY=clamp(sp.y+(fy/fl)*80,a.y+10,a.y+a.h-10);
+      sp.wanderTimer=Date.now()+400;
+    }
+  }
+  if(!sp.wanderTimer||Date.now()>sp.wanderTimer){
+    if(activeGame?.type==='tag'){const a=activeGame.arena;sp.targetX=a.x+20+Math.random()*(a.w-40);sp.targetY=a.y+20+Math.random()*(a.h-40);}
+    else if(activeGame?.type==='collect'&&gameItems.length>0){const it=gameItems[Math.floor(Math.random()*gameItems.length)];sp.targetX=it.x;sp.targetY=it.y;}
+    else if(activeGame?.type==='race'&&raceGoal){sp.targetX=raceGoal.x+Math.random()*40;sp.targetY=raceGoal.y+Math.random()*40;}
+    else if(activeGame?.type==='ab'&&abZones){const z=Math.random()>.5?abZones.a:abZones.b;sp.targetX=z.x+Math.random()*z.w;sp.targetY=z.y+Math.random()*z.h;}
+    else{sp.targetX=clamp(sp.x+(Math.random()-.5)*300,50,WORLD_W-50);sp.targetY=clamp(sp.y+(Math.random()-.5)*300,50,WORLD_H-50);}
+    sp.wanderTimer=Date.now()+1500+Math.random()*4000;
+  }
+  const dx=sp.targetX-sp.x,dy=sp.targetY-sp.y,dist=Math.sqrt(dx*dx+dy*dy);
+  const spd=activeGame?1.8:1;
+  if(dist>5){const s=spd*dt;sp.x+=(dx/dist)*s;sp.y+=(dy/dist)*s;if(Math.abs(dx)>Math.abs(dy))sp.dir=dx<0?1:2;else sp.dir=dy<0?3:0;sp.moving=true;}
+  else sp.moving=false;
+  if(!sp.chatTimer||Date.now()>sp.chatTimer){
+    const msgs=activeGame?["Los los!","Ich bin schneller!","Haha! 😄","Warte auf mich!","Yeees!","Ooh knapp!"]:["Coole Welt! 🌍","Hey!","Was geht?","lol","Die Agents sind witzig 😄"];
+    const msg=msgs[Math.floor(Math.random()*msgs.length)];sp.speechText=msg;sp.speechTimer=3000;addChatMsg(sp.name,sp.color,msg);
+    sp.chatTimer=Date.now()+(activeGame?6000:12000)+Math.random()*10000;
+  }
+}
+
+// ===================== MINIGAME ENGINE =====================
+function updateMinigame(dt){
+  if(!activeGame)return;
+  // Timer: im MP-Modus via startTime synchron, sonst lokal
+  if(socket&&socket.connected&&activeGame.startTime)activeGame.elapsed=Date.now()-activeGame.startTime;
+  else activeGame.elapsed+=dt*16.67;
+  const remaining=Math.max(0,activeGame.duration-activeGame.elapsed);
+  document.getElementById('game-timer').textContent=Math.ceil(remaining/1000)+'s';
+
+  if(activeGame.type==='tag'){
+    // Check tag collisions with other players (remote/sim)
+    entities.forEach(e=>{
+      if(e===player||e.tagged||e.isAgent)return;
+      if(distance(e,player)<14){
+        e.tagged=true;activeGame.score=(activeGame.score||0)+1;
+        document.getElementById('game-score').textContent='Gefangen: '+activeGame.score;
+        e.speechText='Oh nein! 😱';e.speechTimer=2000;
+        if(socket&&socket.connected&&e.remoteId)socket.emit('tag-player',e.remoteId);
+        else addChatMsg('System','',`${player.name} hat ${e.name} gefangen!`,true);
+      }
+    });
+  }
+  else if(activeGame.type==='collect'){
+    // Check item pickup
+    let changed=false;
+    gameItems=gameItems.filter((it,idx)=>{
+      if(it.collected)return true;
+      if(distance({x:it.x,y:it.y},player)<14){
+        activeGame.score=(activeGame.score||0)+it.points;
+        document.getElementById('game-score').textContent='⭐ '+activeGame.score+' Punkte';
+        changed=true;
+        if(socket&&socket.connected){socket.emit('collect-item',idx);it.collected=true;return true;}
+        return false;
+      }
+      // Sim players collect too
+      let simGrabbed=false;
+      entities.forEach(e=>{if(e.isSimPlayer&&!simGrabbed&&distance({x:it.x,y:it.y},e)<14){
+        if(!activeGame.simScores)activeGame.simScores={};
+        activeGame.simScores[e.name]=(activeGame.simScores[e.name]||0)+it.points;
+        simGrabbed=true;changed=true;
+      }});
+      return !simGrabbed;
+    });
+    if(changed||!activeGame._sbInit){updateCollectScoreboard();activeGame._sbInit=true;}
+    document.getElementById('game-dist').textContent='📦 '+gameItems.length+' Items übrig';
+    // Spawn new items
+    if(gameItems.length<8&&Math.random()<.03*dt){
+      const types=[{emoji:'⭐',points:1},{emoji:'💎',points:3},{emoji:'🍎',points:1},{emoji:'🏆',points:5},{emoji:'💰',points:2}];
+      const t=types[Math.floor(Math.random()*types.length)];
+      gameItems.push({x:100+Math.random()*(WORLD_W-200),y:100+Math.random()*(WORLD_H-200),...t,spawnTime:Date.now()});
+    }
+  }
+  else if(activeGame.type==='race'){
+    if(raceGoal){
+      const gx=raceGoal.x+raceGoal.w/2, gy=raceGoal.y+raceGoal.h/2;
+      const dist=distance(player,{x:gx,y:gy});
+      // Distanz-Anzeige
+      if(!activeGame.finished)document.getElementById('game-dist').textContent='📏 '+Math.round(dist)+'px zum Ziel';
+      // Richtungspfeil am Bildschirmrand wenn Ziel außerhalb
+      const arrow=document.getElementById('race-arrow');
+      const screenX=(gx-camX)*SCALE, screenY=(gy-camY)*SCALE;
+      const cw=canvas.width, ch=canvas.height, pad=50;
+      const onScreen=screenX>=0&&screenX<=cw&&screenY>=0&&screenY<=ch;
+      if(onScreen||activeGame.finished){arrow.style.display='none';}
+      else{
+        arrow.style.display='block';
+        // Screen center
+        const dx=screenX-cw/2, dy=screenY-ch/2;
+        const ang=Math.atan2(dy,dx);
+        // Clamp to edge rectangle
+        const rx=cw/2-pad, ry=ch/2-pad;
+        const t=Math.min(rx/Math.abs(Math.cos(ang))||Infinity, ry/Math.abs(Math.sin(ang))||Infinity);
+        const px=cw/2+Math.cos(ang)*t, py=ch/2+Math.sin(ang)*t;
+        arrow.style.left=(px-35)+'px';arrow.style.top=(py-35)+'px';
+        arrow.style.transform='rotate('+(ang*180/Math.PI+90)+'deg)';
+      }
+      if(dist<25&&!activeGame.finished){
+        activeGame.finished=true;activeGame.finishTime=activeGame.elapsed;
+        const secs=(activeGame.finishTime/1000).toFixed(1);
+        document.getElementById('game-score').textContent='🏁 '+secs+'s!';
+        document.getElementById('game-dist').textContent='✅ Ziel erreicht!';
+        showGameMsg('ZIEL ERREICHT!');
+        arrow.style.display='none';
+        if(socket&&socket.connected)socket.emit('race-finish');
+        else addChatMsg('System','',`🏁 ${player.name} hat das Rennen in ${secs}s geschafft!`,true);
+      }
+    }
+  }
+  else if(activeGame.type==='ab'){
+    // Antwort an Server senden (MP), sobald Spieler auf Zone steht
+    if(socket&&socket.connected&&abZones){
+      const onA=isInZone(player,abZones.a);const onB=isInZone(player,abZones.b);
+      const choice=onA?'A':onB?'B':null;
+      if(choice&&choice!==activeGame._lastSent){socket.emit('ab-answer',choice);activeGame._lastSent=choice;}
+    }
+    if(activeGame.questionTimer>0){
+      activeGame.questionTimer-=dt*16.67;
+      if(activeGame.questionTimer<=0){
+        activeGame._lastSent=null;
+        // Single-Player: lokale Antwort auswerten
+        if(!(socket&&socket.connected)){
+          const qa=activeGame.questions[activeGame.currentQ];
+          if(qa&&abZones){
+            const onA=isInZone(player,abZones.a)?'A':'';const onB=isInZone(player,abZones.b)?'B':'';
+            const choice=onA||onB||'?';
+            addChatMsg('System','',`Du hast ${choice==='?'?'kein Feld':'Feld '+choice} (${choice==='A'?qa.a:choice==='B'?qa.b:'---'}) gewählt!`,true);
+            activeGame.currentQ++;
+            if(activeGame.currentQ<activeGame.questions.length){setTimeout(()=>showNextABQuestion(),1500);}
+            else {setTimeout(()=>endGame('Alle Fragen beantwortet!','🅰️🅱️','Letzte Frage!'),2000);return;}
+          }
+        }
+      }
+      document.getElementById('game-timer').textContent=Math.ceil(activeGame.questionTimer/1000)+'s';
+    }
+  }
+
+  // Time up — lokales Auto-End nur bei Single-Player (im MP-Modus endet Server für alle)
+  if(remaining<=0&&activeGame.type!=='ab'&&!(socket&&socket.connected)){
+    if(activeGame.type==='tag')endGame('Zeit um!','Gefangen: '+activeGame.score,`Du hast ${activeGame.score} Spieler gefangen!`);
+    else if(activeGame.type==='collect'){
+      let detail=`Du: ${activeGame.score} Punkte`;
+      if(activeGame.simScores)Object.entries(activeGame.simScores).forEach(([n,s])=>detail+=`\n${n}: ${s}`);
+      endGame('Zeit um!','⭐ '+activeGame.score,detail);
+    }
+    else if(activeGame.type==='race'){
+      if(!activeGame.finished)endGame('Zeit um!','Nicht geschafft!','Versuch es nochmal — du warst so nah dran!');
+      else endGame('Rennen beendet!','🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s','Gut gemacht!');
+    }
+  }
+}
+
+function isInZone(entity,zone){return entity.x>=zone.x&&entity.x<=zone.x+zone.w&&entity.y>=zone.y&&entity.y<=zone.y+zone.h;}
+function updateCollectScoreboard(){
+  if(!activeGame||activeGame.type!=='collect')return;
+  const rows=[{name:player.name,color:player.color,score:activeGame.score||0,you:true}];
+  const sims=activeGame.simScores||{};
+  entities.filter(e=>e.isSimPlayer).forEach(e=>rows.push({name:e.name,color:e.color,score:sims[e.name]||0,you:false}));
+  // Remote players: wir kennen ihre Scores nicht lokal (Server tracked) — zeigen 0 oder aus activeGame.scores falls vom Server
+  entities.filter(e=>e.isRemotePlayer).forEach(e=>{const s=(activeGame.scores&&activeGame.scores[e.remoteId])||0;rows.push({name:e.name,color:e.color,score:s,you:false});});
+  rows.sort((a,b)=>b.score-a.score);
+  const html=rows.map((r,i)=>{const medal=i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':'';return `<div class="sb-row${r.you?' you':''}"><span class="sb-name"><span class="sb-dot" style="background:${r.color}"></span>${medal}${r.name}${r.you?' (Du)':''}</span><span class="sb-score">${r.score}</span></div>`;}).join('');
+  document.getElementById('sb-entries').innerHTML=html||'<div style="color:#666;font-size:10px">Noch keine Punkte</div>';
+}
+function showGameMsg(msg){const el=document.getElementById('game-msg');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3000);}
+function endGame(title,result,detail){
+  activeGame=null;gameItems=[];abZones=null;raceGoal=null;
+  document.getElementById('game-hud').classList.remove('show');
+  document.getElementById('game-scoreboard').classList.remove('show');
+  document.getElementById('race-arrow').style.display='none';
+  document.getElementById('game-dist').textContent='';
+  document.getElementById('game-info').innerHTML='';
+  document.getElementById('end-title').textContent=title;
+  document.getElementById('end-result').textContent=result;
+  document.getElementById('end-detail').textContent=detail;
+  document.getElementById('game-end').classList.add('show');
+  entities.forEach(e=>e.tagged=false);
+}
+function closeGameEnd(){document.getElementById('game-end').classList.remove('show');}
+function stopGameEarly(){
+  if(!activeGame)return;
+  if(socket&&socket.connected){socket.emit('stop-game');}
+  const type=activeGame.type;
+  if(type==='tag')endGame('Abgebrochen','Gefangen: '+(activeGame.score||0),`Spiel vorzeitig beendet.`);
+  else if(type==='collect'){let d=`Du: ${activeGame.score} Punkte`;if(activeGame.simScores)Object.entries(activeGame.simScores).forEach(([n,s])=>d+=`\n${n}: ${s}`);endGame('Abgebrochen','⭐ '+activeGame.score,d);}
+  else if(type==='ab')endGame('Abgebrochen','🅰️🅱️',`${activeGame.currentQ} von ${activeGame.questions.length} Fragen beantwortet.`);
+  else if(type==='race')endGame('Abgebrochen',activeGame.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':'Nicht geschafft','Spiel vorzeitig beendet.');
+}
+
+// ===================== MINIGAME MENU =====================
+function openMinigameMenu(){document.getElementById('minigame-overlay').classList.add('open');document.getElementById('mg-menu').style.display='';document.getElementById('mg-setup-area').style.display='none';}
+function closeMinigameMenu(){document.getElementById('minigame-overlay').classList.remove('open');}
+
+function showMgSetup(type){
+  document.getElementById('mg-menu').style.display='none';
+  const area=document.getElementById('mg-setup-area');area.style.display='';
+  if(type==='tag'){
+    area.innerHTML=`<h3>🏷️ Fangen — Setup</h3>
+      <div class="mg-setup">
+        <label>Dauer (Sekunden)</label><input type="number" id="mg-tag-dur" value="60" min="15" max="180">
+        <label>Spielfeld-Größe</label>
+        <select id="mg-tag-size"><option value="small">Klein (400x300)</option><option value="medium" selected>Mittel (600x450)</option><option value="large">Groß (900x600)</option></select>
+        <p style="font-size:10px;color:#888;margin-top:6px">Du bist "es" — fang so viele wie möglich! Sprint mit Shift.</p>
+        <button class="mg-start" onclick="startTagGame()">🏷️ Fangen starten!</button>
+      </div>`;
+  } else if(type==='collect'){
+    area.innerHTML=`<h3>⭐ Sammelspiel — Setup</h3>
+      <div class="mg-setup">
+        <label>Dauer (Sekunden)</label><input type="number" id="mg-col-dur" value="45" min="15" max="120">
+        <p style="font-size:10px;color:#888;margin-top:6px">Lauf über Items um sie einzusammeln! ⭐=1, 💰=2, 💎=3, 🏆=5 Punkte</p>
+        <button class="mg-start" onclick="startCollectGame()">⭐ Sammeln starten!</button>
+      </div>`;
+  } else if(type==='ab'){
+    area.innerHTML=`<h3>🅰️🅱️ A oder B — Setup</h3>
+      <div class="mg-setup">
+        <label>Fragen (eine pro Zeile, Format: Frage | Antwort A | Antwort B)</label>
+        <textarea id="mg-ab-questions" placeholder="Bücher oder Kino? | Bücher | Kino\nBerge oder Meer? | Berge | Meer\nFrühaufsteher oder Nachteule? | Frühaufsteher | Nachteule">Bücher oder Kino? | Bücher | Kino
+Berge oder Meer? | Berge | Meer
+Frühaufsteher oder Nachteule? | Frühaufsteher | Nachteule
+Pizza oder Pasta? | Pizza | Pasta
+Home Office oder Büro? | Home Office | Büro</textarea>
+        <label>Zeit pro Frage (Sekunden)</label><input type="number" id="mg-ab-time" value="10" min="5" max="30">
+        <button class="mg-start" onclick="startABGame()">🅰️🅱️ Starten!</button>
+      </div>`;
+  } else if(type==='race'){
+    area.innerHTML=`<h3>🏁 Wettrennen — Setup</h3>
+      <div class="mg-setup">
+        <label>Zeitlimit (Sekunden)</label><input type="number" id="mg-race-dur" value="30" min="10" max="120">
+        <label>Distanz</label>
+        <select id="mg-race-dist"><option value="short">Kurz (~400px)</option><option value="medium" selected>Mittel (~800px)</option><option value="long">Lang (~1400px)</option></select>
+        <p style="font-size:10px;color:#888;margin-top:6px">Renn vom Start zum Ziel! Sprint mit Shift.</p>
+        <button class="mg-start" onclick="startRaceGame()">🏁 Rennen starten!</button>
+      </div>`;
+  }
+}
+
+function doCountdown(cb){
+  closeMinigameMenu();
+  const cd=document.getElementById('countdown');cd.classList.add('show');
+  let count=3;cd.textContent=count;
+  const iv=setInterval(()=>{count--;if(count>0)cd.textContent=count;else{cd.textContent='GO!';clearInterval(iv);setTimeout(()=>{cd.classList.remove('show');cb();},600);}},1000);
+}
+
+function startTagGame(){
+  const dur=parseInt(document.getElementById('mg-tag-dur').value)*1000||60000;
+  const sizeKey=document.getElementById('mg-tag-size').value;
+  // Multiplayer: Server startet das Spiel für alle
+  if(socket&&socket.connected){socket.emit('start-game',{type:'tag',duration:dur,size:sizeKey,taggerId:myId,startTime:Date.now()});closeMinigameMenu();return;}
+  // Single-Player fallback
+  const sizes={small:[400,300],medium:[600,450],large:[900,600]};
+  const[aw,ah]=sizes[sizeKey]||sizes.medium;
+  const ax=player.x-aw/2,ay=player.y-ah/2;
+  const arena={x:Math.max(0,ax),y:Math.max(0,ay),w:aw,h:ah};
+  doCountdown(()=>{
+    activeGame={type:'tag',duration:dur,elapsed:0,score:0,arena};
+    document.getElementById('game-hud').classList.add('show');
+    document.getElementById('game-title').textContent='🏷️ FANGEN';
+    document.getElementById('game-score').textContent='Gefangen: 0';
+    addChatMsg('System','','🏷️ Fangen gestartet!',true);
+  });
+}
+
+function startCollectGame(){
+  const dur=parseInt(document.getElementById('mg-col-dur').value)*1000||45000;
+  if(socket&&socket.connected){socket.emit('start-game',{type:'collect',duration:dur,startTime:Date.now()});closeMinigameMenu();return;}
+  // Single-Player fallback
+  gameItems=[];
+  for(let i=0;i<12;i++){
+    const types=[{emoji:'⭐',points:1},{emoji:'💎',points:3},{emoji:'🍎',points:1},{emoji:'🏆',points:5},{emoji:'💰',points:2}];
+    const t=types[Math.floor(Math.random()*types.length)];
+    gameItems.push({x:100+Math.random()*(WORLD_W-200),y:100+Math.random()*(WORLD_H-200),...t,spawnTime:Date.now()});
+  }
+  doCountdown(()=>{
+    activeGame={type:'collect',duration:dur,elapsed:0,score:0,simScores:{}};
+    document.getElementById('game-hud').classList.add('show');
+    document.getElementById('game-title').textContent='⭐ SAMMELN';
+    document.getElementById('game-score').textContent='⭐ 0 Punkte';
+    document.getElementById('game-info').innerHTML='<span class="legend-item">⭐ 1P</span><span class="legend-item">🍎 1P</span><span class="legend-item">💰 2P</span><span class="legend-item">💎 3P</span><span class="legend-item">🏆 5P</span> — laufe drüber';
+    document.getElementById('game-scoreboard').classList.add('show');
+    document.getElementById('sb-title').textContent='⭐ Punktestand';
+  });
+}
+
+function startABGame(){
+  const raw=document.getElementById('mg-ab-questions').value.trim().split('\n').filter(l=>l.includes('|'));
+  const questions=raw.map(l=>{const[q,a,b]=l.split('|').map(s=>s.trim());return{q,a:a||'A',b:b||'B'};});
+  if(questions.length===0){alert('Bitte mindestens eine Frage eingeben!');return;}
+  const timePerQ=parseInt(document.getElementById('mg-ab-time').value)*1000||10000;
+  if(socket&&socket.connected){socket.emit('start-game',{type:'ab',questions,timePerQ,startTime:Date.now()});closeMinigameMenu();return;}
+  // Single-Player fallback
+  const cx=clamp(player.x,200,WORLD_W-200),cy=clamp(player.y,200,WORLD_H-200);
+  abZones={a:{x:cx-150,y:cy-40,w:80,h:80},b:{x:cx+70,y:cy-40,w:80,h:80}};
+  player.x=cx;player.y=cy+60;
+  doCountdown(()=>{
+    activeGame={type:'ab',duration:999999,elapsed:0,questions,currentQ:0,timePerQ,questionTimer:0};
+    document.getElementById('game-hud').classList.add('show');
+    document.getElementById('game-title').textContent='🅰️🅱️ A ODER B';
+    document.getElementById('game-score').textContent='';
+    showNextABQuestion();
+  });
+}
+function showNextABQuestion(){
+  if(!activeGame||activeGame.type!=='ab')return;
+  const q=activeGame.questions[activeGame.currentQ];
+  if(!q)return;
+  activeGame.questionTimer=activeGame.timePerQ;
+  document.getElementById('game-score').textContent=q.q;
+  document.getElementById('game-title').innerHTML=`Frage ${activeGame.currentQ+1}/${activeGame.questions.length}`;
+  showGameMsg(`🅰️ ${q.a}   |   🅱️ ${q.b}`);
+  addChatMsg('System','',`❓ ${q.q} — 🅰️ ${q.a} | 🅱️ ${q.b}`,true);
+}
+
+function startRaceGame(){
+  const dur=parseInt(document.getElementById('mg-race-dur').value)*1000||30000;
+  const distKey=document.getElementById('mg-race-dist').value;
+  if(socket&&socket.connected){socket.emit('start-game',{type:'race',duration:dur,dist:distKey,startTime:Date.now()});closeMinigameMenu();return;}
+  const dists={short:400,medium:800,long:1400};
+  const d=dists[distKey]||800;
+  const angle=Math.random()*Math.PI*2;
+  const gx=clamp(player.x+Math.cos(angle)*d,50,WORLD_W-90);
+  const gy=clamp(player.y+Math.sin(angle)*d,50,WORLD_H-90);
+  raceGoal={x:gx,y:gy,w:40,h:40};
+  const startPos={x:player.x,y:player.y};
+  doCountdown(()=>{
+    activeGame={type:'race',duration:dur,elapsed:0,finished:false,finishTime:0,startPos,totalDist:d};
+    document.getElementById('game-hud').classList.add('show');
+    document.getElementById('game-title').textContent='🏁 WETTRENNEN';
+    document.getElementById('game-score').textContent='Lauf zum Ziel!';
+    document.getElementById('game-info').innerHTML='🏁 Ziel ist markiert (grüner Pfeil zeigt Richtung). Sprint mit <kbd>Shift</kbd>!';
+    document.getElementById('race-arrow').classList.add('show');
+    addChatMsg('System','',`🏁 Wettrennen gestartet — Ziel ist ${Math.round(d)}px entfernt!`,true);
+  });
+}
+
+// ===================== RENDER =====================
+function render(){
+  const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);ctx.save();ctx.scale(SCALE,SCALE);ctx.translate(-camX,-camY);
+  ctx.fillStyle='#1e3a1e';ctx.fillRect(0,0,WORLD_W,WORLD_H);
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.015)';ctx.lineWidth=.5;
+  for(let x=0;x<WORLD_W;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,WORLD_H);ctx.stroke();}
+  for(let y=0;y<WORLD_H;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WORLD_W,y);ctx.stroke();}
+  // Paths
+  ctx.lineWidth=12;ctx.strokeStyle='#2a3a20';worldObjs.filter(o=>o.type==='path').forEach(p=>{ctx.beginPath();ctx.moveTo(p.x1,p.y1);ctx.lineTo(p.x2,p.y2);ctx.stroke();});
+  ctx.lineWidth=8;ctx.strokeStyle='#333d28';worldObjs.filter(o=>o.type==='path').forEach(p=>{ctx.beginPath();ctx.moveTo(p.x1,p.y1);ctx.lineTo(p.x2,p.y2);ctx.stroke();});
+  // Flowers
+  worldObjs.filter(o=>o.type==='flower').forEach(f=>{ctx.fillStyle='#2d5a2d';ctx.fillRect(f.x,f.y+2,1,3);ctx.fillStyle=f.color;ctx.fillRect(f.x-1,f.y,3,3);ctx.fillStyle='#fef08a';ctx.fillRect(f.x,f.y+1,1,1);});
+  // Ponds
+  worldObjs.filter(o=>o.type==='pond').forEach(p=>{ctx.fillStyle='#0f3654';ctx.beginPath();ctx.ellipse(p.x+p.w/2,p.y+p.h/2,p.w/2,p.h/2,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(100,180,255,.15)';ctx.beginPath();ctx.ellipse(p.x+p.w/2-5,p.y+p.h/2-3,p.w/4,p.h/4,0,0,Math.PI*2);ctx.fill();});
+  // Buildings
+  worldObjs.filter(o=>o.type==='building').forEach(b=>{ctx.fillStyle='#5a3a2a';ctx.beginPath();ctx.moveTo(b.x-3,b.y);ctx.lineTo(b.x+b.w/2,b.y-10);ctx.lineTo(b.x+b.w+3,b.y);ctx.fill();ctx.fillStyle='#3a3a5a';ctx.fillRect(b.x,b.y,b.w,b.h);for(let r=0;r<2;r++)for(let c=0;c<3;c++){ctx.fillStyle=`rgba(255,200,50,${.4+Math.random()*.3})`;ctx.fillRect(b.x+5+c*Math.floor(b.w/3.5),b.y+6+r*14,6,8);}ctx.fillStyle='#4a3020';ctx.fillRect(b.x+b.w/2-4,b.y+b.h-12,8,12);});
+  // Rocks
+  worldObjs.filter(o=>o.type==='rock').forEach(r=>{ctx.fillStyle='#4a4a5a';ctx.beginPath();ctx.ellipse(r.x,r.y,r.size,r.size*.65,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#5a5a6a';ctx.beginPath();ctx.ellipse(r.x-1,r.y-1,r.size*.6,r.size*.4,0,0,Math.PI*2);ctx.fill();});
+  // Trees
+  worldObjs.filter(o=>o.type==='tree').forEach(t=>{ctx.fillStyle='#5a3a1a';ctx.fillRect(t.x+8,t.y+14,4,12);ctx.fillStyle=`hsl(${t.hue},45%,${t.light}%)`;ctx.beginPath();ctx.arc(t.x+10,t.y+10,12,0,Math.PI*2);ctx.fill();ctx.fillStyle=`hsl(${t.hue},50%,${t.light+8}%)`;ctx.beginPath();ctx.arc(t.x+8,t.y+8,7,0,Math.PI*2);ctx.fill();});
+  // Campfires
+  const ff=Math.sin(Date.now()/150)*2;
+  worldObjs.filter(o=>o.type==='fire').forEach(f=>{ctx.fillStyle='#3a2a1a';ctx.fillRect(f.x-4,f.y+2,8,3);ctx.fillStyle='#ff6600';ctx.beginPath();ctx.ellipse(f.x,f.y+ff,4,6+ff,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.ellipse(f.x,f.y-1+ff,2,3,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,100,0,.05)';ctx.beginPath();ctx.arc(f.x,f.y,30,0,Math.PI*2);ctx.fill();});
+
+  // === GAME OVERLAYS ===
+  // Tag arena
+  if(activeGame?.type==='tag'){
+    const a=activeGame.arena;
+    ctx.strokeStyle='rgba(255,50,50,.6)';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.strokeRect(a.x,a.y,a.w,a.h);ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,50,50,.04)';ctx.fillRect(a.x,a.y,a.w,a.h);
+    // Label
+    ctx.font='bold 6px sans-serif';ctx.fillStyle='rgba(255,100,100,.7)';ctx.textAlign='center';
+    ctx.fillText('🏷️ FANGEN ARENA',a.x+a.w/2,a.y-4);
+  }
+  // Collect items
+  if(activeGame?.type==='collect'){
+    gameItems.forEach(it=>{
+      if(it.collected)return;
+      const pulse=Math.sin(Date.now()/250+it.x)*.5+.5;
+      const bob=Math.sin(Date.now()/350+it.x)*1.5;
+      // outer glow
+      ctx.fillStyle=`rgba(255,220,80,${.15+pulse*.2})`;ctx.beginPath();ctx.arc(it.x,it.y+bob,14,0,Math.PI*2);ctx.fill();
+      // inner ring
+      ctx.strokeStyle=`rgba(255,200,50,${.5+pulse*.4})`;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(it.x,it.y+bob,9,0,Math.PI*2);ctx.stroke();
+      // emoji (bigger)
+      ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(it.emoji,it.x,it.y+bob+5);
+      // point label
+      ctx.font='bold 5px sans-serif';ctx.fillStyle='#fde047';ctx.fillText('+'+it.points,it.x,it.y+bob-10);
+    });
+  }
+  // A/B zones
+  if(abZones){
+    ctx.fillStyle='rgba(59,130,246,.15)';ctx.fillRect(abZones.a.x,abZones.a.y,abZones.a.w,abZones.a.h);
+    ctx.strokeStyle='rgba(59,130,246,.6)';ctx.lineWidth=1.5;ctx.strokeRect(abZones.a.x,abZones.a.y,abZones.a.w,abZones.a.h);
+    ctx.font='bold 12px sans-serif';ctx.fillStyle='rgba(59,130,246,.8)';ctx.textAlign='center';
+    ctx.fillText('A',abZones.a.x+abZones.a.w/2,abZones.a.y+abZones.a.h/2+4);
+
+    ctx.fillStyle='rgba(239,68,68,.15)';ctx.fillRect(abZones.b.x,abZones.b.y,abZones.b.w,abZones.b.h);
+    ctx.strokeStyle='rgba(239,68,68,.6)';ctx.lineWidth=1.5;ctx.strokeRect(abZones.b.x,abZones.b.y,abZones.b.w,abZones.b.h);
+    ctx.fillStyle='rgba(239,68,68,.8)';ctx.fillText('B',abZones.b.x+abZones.b.w/2,abZones.b.y+abZones.b.h/2+4);
+
+    if(activeGame?.type==='ab'&&activeGame.questions[activeGame.currentQ]){
+      const q=activeGame.questions[activeGame.currentQ];
+      ctx.font='bold 4px sans-serif';ctx.fillStyle='rgba(59,130,246,.9)';
+      ctx.fillText(q.a,abZones.a.x+abZones.a.w/2,abZones.a.y-4);
+      ctx.fillStyle='rgba(239,68,68,.9)';
+      ctx.fillText(q.b,abZones.b.x+abZones.b.w/2,abZones.b.y-4);
+    }
+  }
+  // Race goal + route
+  if(raceGoal){
+    const gx=raceGoal.x+raceGoal.w/2, gy=raceGoal.y+raceGoal.h/2;
+    // Dashed route from start position to goal
+    if(activeGame?.type==='race'&&activeGame.startPos){
+      ctx.strokeStyle='rgba(34,197,94,.35)';ctx.lineWidth=2;ctx.setLineDash([6,5]);
+      ctx.beginPath();ctx.moveTo(activeGame.startPos.x,activeGame.startPos.y);ctx.lineTo(gx,gy);ctx.stroke();ctx.setLineDash([]);
+      // Start marker
+      ctx.fillStyle='rgba(251,191,36,.5)';ctx.beginPath();ctx.arc(activeGame.startPos.x,activeGame.startPos.y,6,0,Math.PI*2);ctx.fill();
+      ctx.font='bold 5px sans-serif';ctx.fillStyle='#fbbf24';ctx.textAlign='center';ctx.fillText('START',activeGame.startPos.x,activeGame.startPos.y-8);
+    }
+    // Pulsing outer ring (big, visible)
+    const pulse=(Date.now()/500)%1;
+    const r1=20+pulse*40;
+    ctx.strokeStyle=`rgba(34,197,94,${.8-pulse*.8})`;ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(gx,gy,r1,0,Math.PI*2);ctx.stroke();
+    // Inner solid pillar
+    ctx.fillStyle='rgba(34,197,94,.25)';ctx.fillRect(raceGoal.x-4,raceGoal.y-4,raceGoal.w+8,raceGoal.h+8);
+    ctx.strokeStyle='#22c55e';ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.strokeRect(raceGoal.x,raceGoal.y,raceGoal.w,raceGoal.h);ctx.setLineDash([]);
+    // Big flag
+    const bob=Math.sin(Date.now()/200)*2;
+    ctx.font='28px sans-serif';ctx.textAlign='center';ctx.fillText('🏁',gx,gy+10+bob);
+    // Label above
+    ctx.font='bold 6px sans-serif';ctx.fillStyle='#22c55e';ctx.fillText('ZIEL',gx,raceGoal.y-6);
+  }
+
+  // Entities sorted by Y
+  [...entities].sort((a,b)=>a.y-b.y).forEach(e=>{
+    // Tagged indicator
+    if(e.tagged){ctx.fillStyle='rgba(255,0,0,.1)';ctx.beginPath();ctx.arc(e.x+8,e.y+8,12,0,Math.PI*2);ctx.fill();}
+    ctx.drawImage(e.sprite,e.frame*16,e.dir*16,16,16,Math.round(e.x),Math.round(e.y),16,16);
+    // Name
+    ctx.save();ctx.font='bold 4px sans-serif';ctx.textAlign='center';
+    const nw=ctx.measureText(e.name).width+4;ctx.fillStyle='rgba(0,0,0,.7)';
+    roundRect(ctx,e.x+8-nw/2,e.y-6,nw,7,2);ctx.fillStyle=e.isAgent?'#c4b5fd':'#fff';
+    ctx.fillText((e.isAgent?'🤖 ':'')+e.name+(e.tagged?' ❌':''),e.x+8,e.y-1);ctx.restore();
+    // Speech
+    if(e.speechText){ctx.save();ctx.font='3.5px sans-serif';const lines=wrapText(ctx,e.speechText,60);const bw=Math.min(65,Math.max(...lines.map(l=>ctx.measureText(l).width))+8);const bh=lines.length*5+6;const bx=e.x+8-bw/2;const by=e.y-10-bh;
+    ctx.fillStyle='rgba(255,255,255,.95)';roundRect(ctx,bx,by,bw,bh,3);ctx.beginPath();ctx.moveTo(e.x+5,by+bh);ctx.lineTo(e.x+8,by+bh+3);ctx.lineTo(e.x+11,by+bh);ctx.fill();
+    ctx.fillStyle='#1a1a2e';lines.forEach((l,li)=>ctx.fillText(l,bx+4,by+5+li*5));ctx.restore();}
+  });
+  ctx.restore();
+}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.fill();}
+function wrapText(ctx,text,maxW){const words=text.split(' ');const lines=[];let line='';words.forEach(w=>{const test=line?line+' '+w:w;if(ctx.measureText(test).width>maxW&&line){lines.push(line);line=w;}else line=test;});if(line)lines.push(line);return lines;}
+
+// ===================== HUD =====================
+function updateHUD(){document.getElementById('hud-pos').textContent=`${Math.round(player.x)}, ${Math.round(player.y)}`;document.getElementById('hud-online').textContent=`Online: ${entities.length}`;}
+function updateMinimap(){const mc=document.getElementById('minimap-canvas'),mx=mc.getContext('2d'),sx=mc.width/WORLD_W,sy=mc.height/WORLD_H;mx.fillStyle='#1e3a1e';mx.fillRect(0,0,mc.width,mc.height);
+worldObjs.filter(o=>o.type==='tree').forEach(t=>{mx.fillStyle='#2d5a2d';mx.fillRect(t.x*sx-1,t.y*sy-1,2,2);});
+if(raceGoal){mx.fillStyle='#22c55e';mx.fillRect(raceGoal.x*sx-2,raceGoal.y*sy-2,5,5);}
+if(activeGame?.type==='tag'){const a=activeGame.arena;mx.strokeStyle='#f87171';mx.lineWidth=1;mx.strokeRect(a.x*sx,a.y*sy,a.w*sx,a.h*sy);}
+entities.forEach(e=>{mx.fillStyle=e.isAgent?'#a855f7':e.color;mx.beginPath();mx.arc(e.x*sx,e.y*sy,e===player?3:2,0,Math.PI*2);mx.fill();});
+const vw=canvas.width/SCALE,vh=canvas.height/SCALE;mx.strokeStyle='rgba(255,255,255,.3)';mx.lineWidth=1;mx.strokeRect(camX*sx,camY*sy,vw*sx,vh*sy);}
+function updateOnlineList(){document.getElementById('online-entries').innerHTML=entities.map(e=>`<div class="online-entry"><div class="online-dot" style="background:${e.color}"></div><span>${e.isAgent?'🤖 ':''}${e.name}${e===player?' (Du)':''}${e.tagged?' ❌':''}</span></div>`).join('');}
+
+// ===================== CHAT =====================
+function addChatMsg(n,c,t,sys=false,ag=false){const log=document.getElementById('chat-log'),d=document.createElement('div');d.className='chat-msg'+(sys?' system':'')+(ag?' agent':'');d.innerHTML=sys?t:`<span class="name" style="color:${c}">${n}:</span> ${esc(t)}`;log.appendChild(d);log.scrollTop=log.scrollHeight;}
+function sendChat(){const inp=document.getElementById('chat-input'),t=inp.value.trim();if(!t)return;player.speechText=t;player.speechTimer=4000;inp.value='';
+if(socket&&socket.connected){socket.emit('chat',t);return;}
+addChatMsg(player.name,player.color,t);
+const near=entities.filter(e=>e.isAgent&&e.agentCfg?.active&&distance(e,player)<350);
+if(near.length>0&&Math.random()>.3){const a=near[Math.floor(Math.random()*near.length)];setTimeout(()=>{const p=PERSONALITIES[a.agentCfg.personality];const r=p?p.msgs[Math.floor(Math.random()*p.msgs.length)]:"Hmm!";a.speechText=r;a.speechTimer=4000;addChatMsg(a.name,a.color,r,false,true);},1500+Math.random()*2000);}}
+function toggleChatPanel(){chatHidden=!chatHidden;document.getElementById('chat-panel').classList.toggle('hidden',chatHidden);const b=document.getElementById('chat-toggle-btn');b.classList.toggle('chat-off',chatHidden);b.textContent=chatHidden?'🚫':'💬';if(chatHidden){document.getElementById('chat-input').blur();chatFocused=false;}}
+
+// ===================== AGENTS QUICK TOGGLE =====================
+function quickToggleAgents(){
+  // Bei Socket-Verbindung an Server delegieren, damit alle Spieler den gleichen Zustand haben
+  if(socket&&socket.connected){socket.emit('toggle-agents');return;}
+  agentsEnabled=!agentsEnabled;
+  const btn=document.getElementById('agents-quick-toggle');
+  btn.textContent=agentsEnabled?'👁 Agents An':'🚫 Agents Aus';
+  btn.classList.toggle('agents-off',!agentsEnabled);
+  spawnAgentsFromConfig();
+  addChatMsg('System','',agentsEnabled?'Alle Agents aktiviert.':'Alle Agents deaktiviert — nur Team-Modus!',true);
+}
+
+// ===================== CONFIG PANEL =====================
+function toggleConfig(){configOpen=!configOpen;document.getElementById('config-overlay').classList.toggle('open',configOpen);if(configOpen)renderConfigPanel();}
+function renderConfigPanel(){document.getElementById('agent-config-list').innerHTML=agentConfigs.map((cfg,i)=>`
+  <div class="config-section collapsed" id="as-${i}"><div class="config-section-header" onclick="document.getElementById('as-${i}').classList.toggle('collapsed')">
+    <h3><span style="color:${cfg.color}">${PERSONALITIES[cfg.personality]?.emoji||'🤖'}</span> ${cfg.name}
+      <span class="agent-status ${cfg.active?'active':'paused'}"><span class="agent-status-dot"></span>${cfg.active?'An':'Aus'}</span></h3>
+    <span class="section-toggle">▼</span></div>
+  <div class="config-section-body">
+    <div class="config-row"><label>Name</label><input type="text" value="${cfg.name}" maxlength="20" onchange="uCfg(${i},'name',this.value)">
+      <label style="min-width:35px">Farbe</label><input type="color" value="${cfg.color}" onchange="uCfg(${i},'color',this.value)"></div>
+    <div class="config-row"><label>Persönlichkeit</label><div class="personality-chips">
+      ${Object.entries(PERSONALITIES).map(([k,p])=>`<span class="p-chip ${cfg.personality===k?'active':''}" onclick="uCfg(${i},'personality','${k}');renderConfigPanel()">${p.emoji} ${p.label}</span>`).join('')}</div></div>
+    <div class="config-row"><label>Speed</label><input type="range" min="0.2" max="5" step="0.1" value="${cfg.speed}" oninput="uCfg(${i},'speed',+this.value);this.nextElementSibling.textContent=this.value+'x'"><span class="range-val">${cfg.speed}x</span></div>
+    <div class="config-row"><label>Chat-Freq</label><input type="range" min="3" max="60" step="1" value="${cfg.chatFreq}" oninput="uCfg(${i},'chatFreq',+this.value);this.nextElementSibling.textContent=this.value+'s'"><span class="range-val">${cfg.chatFreq}s</span></div>
+    <div class="config-row"><label>Wanderradius</label><input type="range" min="50" max="1000" step="10" value="${cfg.wanderRadius}" oninput="uCfg(${i},'wanderRadius',+this.value);this.nextElementSibling.textContent=this.value"><span class="range-val">${cfg.wanderRadius}</span></div>
+    <div class="config-row"><label>Eigene Msgs</label><textarea onchange="uCfg(${i},'customMsgs',this.value.split('\\n').filter(l=>l.trim()))">${(cfg.customMsgs||[]).join('\n')}</textarea></div>
+    <div class="agent-actions">
+      <button class="btn-sm ${cfg.active?'btn-warning':'btn-success'}" onclick="tAgent(${i})">${cfg.active?'⏸':'▶'}</button>
+      <button class="btn-sm btn-success" onclick="tpAgent(${i})">📍</button>
+      <button class="btn-sm btn-danger" onclick="rmAgent(${i})">🗑</button></div>
+  </div></div>`).join('');}
+function uCfg(i,k,v){agentConfigs[i][k]=v;const a=entities.find(e=>e.isAgent&&e.agentCfg===agentConfigs[i]);if(a){if(k==='name')a.name=v;if(k==='color'){a.color=v;rebuildSprite(a);}}}
+function tAgent(i){agentConfigs[i].active=!agentConfigs[i].active;spawnAgentsFromConfig();renderConfigPanel();}
+function tpAgent(i){const a=entities.find(e=>e.isAgent&&e.agentCfg===agentConfigs[i]);if(a){a.x=player.x+(Math.random()-.5)*80;a.y=player.y+(Math.random()-.5)*80;}}
+function rmAgent(i){agentConfigs.splice(i,1);spawnAgentsFromConfig();renderConfigPanel();}
+function addNewAgent(){const pk=Object.keys(PERSONALITIES);agentConfigs.push({name:`Agent ${agentConfigs.length+1}`,color:`hsl(${Math.random()*360},70%,50%)`,personality:pk[Math.floor(Math.random()*pk.length)],speed:1+Math.random()*1.5,chatFreq:8+Math.floor(Math.random()*15),wanderRadius:200+Math.floor(Math.random()*400),active:true,customMsgs:[]});spawnAgentsFromConfig();renderConfigPanel();}
+function toggleAllAgents(){const any=agentConfigs.some(c=>c.active);agentConfigs.forEach(c=>c.active=!any);spawnAgentsFromConfig();renderConfigPanel();}
+function resetAllAgents(){agentConfigs=JSON.parse(JSON.stringify(DEFAULT_AGENTS));spawnAgentsFromConfig();renderConfigPanel();}
+function exportConfig(){navigator.clipboard.writeText(JSON.stringify(agentConfigs,null,2)).then(()=>addChatMsg('System','','Config kopiert!',true)).catch(()=>prompt('Config:',JSON.stringify(agentConfigs)));}
+function importConfigPrompt(){const j=prompt('JSON:');if(!j)return;try{const p=JSON.parse(j);if(Array.isArray(p)){agentConfigs=p;spawnAgentsFromConfig();renderConfigPanel();}}catch(e){alert('Ungültig!');}}
+function loadPreset(p){const presets={party:[{name:'DJ Bot',color:'#f43f5e',personality:'energetisch',speed:3,chatFreq:5,wanderRadius:600,active:true},{name:'Confetti',color:'#fbbf24',personality:'witzig',speed:4,chatFreq:4,wanderRadius:800,active:true}],zen:[{name:'Sensei',color:'#6ee7b7',personality:'philosophisch',speed:.3,chatFreq:30,wanderRadius:150,active:true}],chaos:Array.from({length:10},(_,i)=>({name:`C-${i+1}`,color:`hsl(${i*36},80%,55%)`,personality:Object.keys(PERSONALITIES)[i%6],speed:2+Math.random()*3,chatFreq:3,wanderRadius:600,active:true})),minimal:[{name:'Helper',color:'#3b82f6',personality:'freundlich',speed:1,chatFreq:20,wanderRadius:300,active:true}],army:Array.from({length:8},(_,i)=>({name:`Soldat ${i+1}`,color:`hsl(${120+i*5},40%,${30+i*3}%)`,personality:'technisch',speed:2,chatFreq:10,wanderRadius:200,active:true}))};if(presets[p]){agentConfigs=presets[p];spawnAgentsFromConfig();renderConfigPanel();}}
+
+// ===================== INPUT =====================
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='Enter'&&gameStarted&&!configOpen&&!chatHidden&&!document.getElementById('minigame-overlay').classList.contains('open')){
+    const inp=document.getElementById('chat-input');if(chatFocused&&inp.value.trim())sendChat();else{inp.focus();chatFocused=true;}e.preventDefault();}
+  if(e.code==='Escape'){if(configOpen)toggleConfig();else if(document.getElementById('minigame-overlay').classList.contains('open'))closeMinigameMenu();else{document.getElementById('chat-input').blur();chatFocused=false;}}
+  if(e.code==='Tab'&&gameStarted&&!chatFocused){e.preventDefault();toggleConfig();}
+  if(e.code==='KeyC'&&gameStarted&&!chatFocused&&!configOpen)toggleChatPanel();
+  if(e.code==='KeyM'&&gameStarted&&!chatFocused&&!configOpen)openMinigameMenu();
+  if(e.code==='KeyQ'&&gameStarted&&!chatFocused&&!configOpen&&activeGame)stopGameEarly();
+  if(e.code==='KeyG'&&gameStarted&&!chatFocused&&!configOpen){quickToggleAgents();e.preventDefault();}
+});
+document.addEventListener('keyup',e=>{keys[e.code]=false;});
+document.getElementById('chat-input').addEventListener('focus',()=>{chatFocused=true;});
+document.getElementById('chat-input').addEventListener('blur',()=>{chatFocused=false;});
+
+// ===================== UTILS =====================
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function distance(a,b){return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
