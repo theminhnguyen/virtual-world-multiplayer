@@ -155,11 +155,24 @@ io.on('connection', (socket) => {
 
   // ---- MINIGAME EVENTS ----
   socket.on('start-game', (data) => {
+    // Schutz gegen Doppel-Starts: wenn bereits ein Spiel läuft, freundlich ablehnen.
+    if (activeGame) {
+      socket.emit('chat', { name: 'System', color: '', text: '⚠️ Es läuft bereits ein Spiel. Bitte warte bis es beendet ist.', system: true });
+      return;
+    }
+    // Input sanity-check (typ + dauer)
+    if (!data || typeof data !== 'object' || !['tag','collect','ab','race'].includes(data.type)) return;
+    if (typeof data.duration !== 'number' || data.duration < 5000 || data.duration > 600000) {
+      // AB hat keine duration; andere müssen im Rahmen 5s..10min bleiben
+      if (data.type !== 'ab') return;
+    }
     startGameServer(data);
   });
 
   socket.on('stop-game', () => {
     if (activeGame) {
+      const stopper = players.get(socket.id);
+      const byName = stopper ? stopper.name : 'Jemand';
       // Sende game-ended mit Leaderboard (nicht nur game-stopped), damit alle
       // Spieler das finale Ranking sehen — auch bei vorzeitigem Abbruch.
       io.emit('game-ended', {
@@ -168,10 +181,11 @@ io.on('connection', (socket) => {
         leaderboard: buildLeaderboard(activeGame),
         abResults: buildABResults(activeGame),
         stopped: true,
+        stoppedBy: byName,
       });
       activeGame = null; gameItems = []; abZones = null; raceGoal = null;
       players.forEach(p => p.tagged = false);
-      io.emit('chat', { name: 'System', color: '', text: 'Spiel wurde beendet.', system: true });
+      io.emit('chat', { name: 'System', color: '', text: `Spiel von ${byName} beendet.`, system: true });
     }
   });
 
@@ -232,15 +246,17 @@ io.on('connection', (socket) => {
     }
   });
 
-  // AB answer
+  // AB answer — speichert nur, KEIN Chat-Emit pro Wechsel (sonst Flood beim
+  // Hin- und Herlaufen zwischen den Zonen). Alle Antworten werden im ab-result
+  // Summary am Fragen-Ende zusammengefasst.
   socket.on('ab-answer', (choice) => {
     if (!activeGame || activeGame.type !== 'ab') return;
+    if (choice !== 'A' && choice !== 'B') return;
     const p = players.get(socket.id);
     if (p) {
       if (!activeGame.answers) activeGame.answers = {};
       if (!activeGame.answers[activeGame.currentQ]) activeGame.answers[activeGame.currentQ] = {};
       activeGame.answers[activeGame.currentQ][socket.id] = choice;
-      io.emit('chat', { name: 'System', color: '', text: `${p.name} wählt ${choice}`, system: true });
     }
   });
 

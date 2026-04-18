@@ -1,327 +1,4 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-<title>Virtual World Chat</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a1a;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh}
-#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0a0a2e,#1a1a3e);display:flex;align-items:center;justify-content:center;z-index:1000;transition:opacity .5s}
-#login-screen.hidden{opacity:0;pointer-events:none}
-.login-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:50px;text-align:center;backdrop-filter:blur(20px);box-shadow:0 20px 60px rgba(0,0,0,.5)}
-.login-box h1{font-size:2.5em;margin-bottom:8px;background:linear-gradient(135deg,#6ee7b7,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.login-box p{color:#888;margin-bottom:30px;font-size:.95em}
-.login-box input{width:280px;padding:14px 20px;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-size:1.1em;outline:none}
-.login-box input:focus{border-color:#3b82f6}.login-box input::placeholder{color:#555}
-.login-box button{display:block;width:280px;margin:16px auto 0;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:1.1em;cursor:pointer;font-weight:600;transition:transform .2s}
-.login-box button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(59,130,246,.4)}
-.login-credit{margin-top:22px;font-size:.72em;color:rgba(255,255,255,.35);letter-spacing:.3px;font-style:italic}
-/* ===== MOBILE CONTROLS ===== */
-#mobile-controls{position:fixed;inset:0;pointer-events:none;z-index:300;display:none}
-#mobile-controls.show{display:block}
-#joystick{position:absolute;left:22px;bottom:28px;width:130px;height:130px;border-radius:50%;background:rgba(10,10,30,.35);border:2px solid rgba(255,255,255,.18);pointer-events:auto;touch-action:none;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.35)}
-#joystick-knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#93c5fd,#3b82f6 70%);box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 -3px 8px rgba(0,0,0,.25);pointer-events:none;transition:transform .04s linear}
-#mobile-sprint{position:absolute;right:22px;bottom:36px;width:86px;height:86px;border-radius:50%;background:rgba(251,191,36,.15);border:2px solid rgba(251,191,36,.45);color:#fbbf24;font-size:2.1em;pointer-events:auto;touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer}
-#mobile-sprint.active{background:rgba(251,191,36,.5);transform:scale(.92)}
-#mobile-chat-btn,#mobile-mg-btn,#mobile-stop-btn{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(10,10,30,.75);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:1.15em;pointer-events:auto;-webkit-tap-highlight-color:transparent;cursor:pointer;backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center}
-#mobile-chat-btn{right:120px;bottom:60px}
-#mobile-mg-btn{right:26px;bottom:136px}
-#mobile-stop-btn{right:90px;bottom:136px;background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5);color:#fca5a5;display:none}
-#mobile-stop-btn.show{display:flex}
-@media (max-width:720px){
-  #hud{font-size:10px}
-  #minimap{transform:scale(.8);transform-origin:top right}
-  .top-btns{top:6px;gap:4px}
-  .top-btn{padding:6px 10px;font-size:10px}
-  #chat-panel{font-size:.9em}
-  .login-box{padding:30px 26px}
-  .login-box input,.login-box button{width:240px}
-}
-.login-credit .heart{color:#f87171;display:inline-block;animation:heartbeat 1.6s ease-in-out infinite}
-@keyframes heartbeat{0%,100%{transform:scale(1)}15%{transform:scale(1.25)}30%{transform:scale(1)}45%{transform:scale(1.2)}60%{transform:scale(1)}}
-.color-picker{display:flex;gap:10px;justify-content:center;margin:20px 0}
-.color-opt{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .2s}
-.color-opt:hover,.color-opt.selected{transform:scale(1.2);border-color:#fff}
-#game-container{position:relative;width:100vw;height:100vh;overflow:hidden;background:#1a2a1a}
-#world-canvas{position:absolute;top:0;left:0;image-rendering:pixelated}
 
-/* Chat */
-#chat-panel{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:min(600px,90vw);z-index:100;transition:opacity .25s,transform .25s}
-#chat-panel.hidden{opacity:0;pointer-events:none;transform:translateX(-50%) translateY(20px)}
-#chat-log{height:140px;overflow-y:auto;padding:12px;margin-bottom:4px;background:rgba(10,10,30,.88);border-radius:12px 12px 0 0;backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-bottom:none;scrollbar-width:thin;scrollbar-color:#333 transparent}
-.chat-msg{margin-bottom:5px;font-size:12px;line-height:1.4}.chat-msg .name{font-weight:700}
-.chat-msg.system{color:#666;font-style:italic}.chat-msg.agent .name{color:#a78bfa}
-#chat-input-area{display:flex;gap:6px;background:rgba(10,10,30,.92);padding:8px 12px;border-radius:0 0 12px 12px;backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-top:1px solid rgba(255,255,255,.05)}
-#chat-input{flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-size:13px;outline:none}
-#chat-input:focus{border-color:#3b82f6}#chat-input::placeholder{color:#555}
-#chat-send{padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-weight:600;cursor:pointer;font-size:13px}
-
-/* HUD */
-#hud{position:fixed;top:12px;left:12px;z-index:100;display:flex;gap:8px;align-items:center}
-.hud-badge{background:rgba(10,10,30,.82);padding:6px 12px;border-radius:8px;font-size:10px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08)}
-#sprint-bar-wrap{position:fixed;bottom:210px;left:50%;transform:translateX(-50%);width:120px;height:6px;background:rgba(0,0,0,.5);border-radius:3px;z-index:50;opacity:0;transition:opacity .3s}
-#sprint-bar-wrap.show{opacity:1}
-#sprint-bar{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:3px;width:100%;transition:width .1s}
-#minimap{position:fixed;top:12px;right:12px;width:140px;height:93px;background:rgba(10,10,30,.82);border-radius:8px;z-index:100;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);overflow:hidden}
-#minimap canvas{width:100%;height:100%}
-#online-list{position:fixed;top:120px;right:12px;width:140px;z-index:100;background:rgba(10,10,30,.82);border-radius:8px;padding:8px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);font-size:10px;max-height:200px;overflow-y:auto}
-#online-list h3{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.online-entry{display:flex;align-items:center;gap:5px;padding:2px 0}.online-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-#controls-help{position:fixed;bottom:190px;left:50%;transform:translateX(-50%);background:rgba(10,10,30,.7);padding:5px 14px;border-radius:7px;font-size:9px;color:#555;backdrop-filter:blur(10px);z-index:50}
-kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-family:monospace;border:1px solid rgba(255,255,255,.12)}
-
-/* Top Buttons */
-.top-btns{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:400;display:flex;gap:6px;pointer-events:auto}
-.top-btn{background:rgba(10,10,30,.85);color:#ccc;border:1px solid rgba(255,255,255,.12);padding:7px 14px;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;backdrop-filter:blur(10px);transition:all .15s;white-space:nowrap}
-.top-btn:hover{background:rgba(255,255,255,.1)}
-.top-btn.active{background:rgba(139,92,246,.25);border-color:#8b5cf6;color:#c4b5fd}
-.top-btn.agents-off{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:#f87171}
-#chat-toggle-btn{position:fixed;bottom:20px;right:20px;z-index:101;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(10,10,30,.85);color:#fff;font-size:18px;cursor:pointer;backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center}
-#chat-toggle-btn:hover{background:rgba(59,130,246,.3)}
-#chat-toggle-btn.chat-off{color:#666}
-
-/* Config Panel */
-#config-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-#config-overlay.open{display:flex}
-#config-panel{background:#12122a;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:min(760px,92vw);max-height:85vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,0,.6);scrollbar-width:thin;scrollbar-color:#333 transparent}
-.config-header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;background:#12122a;z-index:10;border-radius:16px 16px 0 0}
-.config-header h2{font-size:1.2em;display:flex;align-items:center;gap:8px}
-.config-close{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.config-close:hover{background:rgba(255,0,0,.2)}
-.config-body{padding:14px 22px 22px}
-.config-section{margin-bottom:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;overflow:hidden}
-.config-section-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none}
-.config-section-header:hover{background:rgba(255,255,255,.03)}
-.config-section-header h3{font-size:12px;display:flex;align-items:center;gap:6px}
-.section-toggle{color:#666;font-size:10px;transition:transform .2s}
-.config-section.collapsed .section-toggle{transform:rotate(-90deg)}
-.config-section.collapsed .config-section-body{display:none}
-.config-section-body{padding:0 14px 12px}
-.config-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
-.config-row label{font-size:10px;color:#999;min-width:80px}
-.config-row input[type="text"],.config-row select{flex:1;min-width:80px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-size:11px;outline:none}
-.config-row input:focus{border-color:#6366f1}
-.config-row input[type="color"]{width:32px;height:28px;border:none;background:none;cursor:pointer;border-radius:6px}
-.config-row input[type="range"]{flex:1;min-width:60px;accent-color:#6366f1}
-.range-val{font-size:10px;color:#aaa;min-width:28px;text-align:right}
-.config-row textarea{flex:1;min-width:160px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-size:10px;outline:none;resize:vertical;min-height:40px;font-family:inherit}
-.personality-chips{display:flex;gap:4px;flex-wrap:wrap}
-.p-chip{padding:2px 8px;border-radius:14px;font-size:9px;cursor:pointer;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);transition:all .2s;user-select:none}
-.p-chip:hover{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.3)}
-.p-chip.active{background:rgba(139,92,246,.22);border-color:#8b5cf6;color:#c4b5fd}
-.agent-actions{display:flex;gap:5px;margin-top:5px}
-.btn-sm{padding:4px 10px;border-radius:6px;border:none;font-size:10px;cursor:pointer;font-weight:600}
-.btn-danger{background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.25)}
-.btn-warning{background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
-.btn-success{background:rgba(34,197,94,.18);color:#4ade80;border:1px solid rgba(34,197,94,.25)}
-.add-agent-area{padding:14px;text-align:center;border-top:1px solid rgba(255,255,255,.06)}
-.btn-add{padding:8px 20px;border-radius:8px;border:2px dashed rgba(139,92,246,.35);background:rgba(139,92,246,.06);color:#a78bfa;font-size:12px;cursor:pointer;font-weight:600}
-.btn-add:hover{background:rgba(139,92,246,.12);border-color:#8b5cf6}
-.agent-status{display:inline-flex;align-items:center;gap:4px;font-size:9px;padding:2px 7px;border-radius:14px}
-.agent-status.active{background:rgba(34,197,94,.12);color:#4ade80}
-.agent-status.paused{background:rgba(245,158,11,.12);color:#fbbf24}
-.agent-status-dot{width:5px;height:5px;border-radius:50%}
-.agent-status.active .agent-status-dot{background:#4ade80}
-.agent-status.paused .agent-status-dot{background:#fbbf24}
-.global-controls{display:flex;gap:6px;padding:12px 22px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap}
-.btn-global{padding:6px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#ccc;font-size:10px;cursor:pointer;font-weight:500}
-.btn-global:hover{background:rgba(255,255,255,.08)}
-.presets-row{display:flex;gap:5px;padding:0 22px 10px;flex-wrap:wrap}
-.preset-btn{padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#999;font-size:9px;cursor:pointer}
-.preset-btn:hover{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.25);color:#c4b5fd}
-
-/* Minigame Overlay */
-#minigame-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-#minigame-overlay.open{display:flex}
-#minigame-panel{background:#12122a;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:min(550px,92vw);max-height:85vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,0,.6);padding:24px}
-#minigame-panel h2{font-size:1.3em;margin-bottom:16px;text-align:center}
-.mg-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .2s}
-.mg-card:hover{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3)}
-.mg-card h3{font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-.mg-card p{font-size:11px;color:#888;line-height:1.4}
-.mg-setup{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}
-.mg-setup label{display:block;font-size:11px;color:#999;margin-bottom:4px}
-.mg-setup input,.mg-setup textarea,.mg-setup select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-size:12px;outline:none;margin-bottom:8px;font-family:inherit}
-.mg-setup textarea{min-height:80px;resize:vertical}
-.mg-start{display:block;width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
-.mg-start:hover{filter:brightness(1.1)}
-
-/* Game HUD overlay */
-#game-hud{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:150;text-align:center;display:none;pointer-events:none}
-#game-hud > *{pointer-events:auto}
-#game-hud.show{display:block}
-#stop-game-btn{pointer-events:auto;margin-top:6px;padding:6px 18px;border-radius:8px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.2);color:#f87171;font-size:11px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px)}
-#stop-game-btn:hover{background:rgba(239,68,68,.35)}
-#game-title{font-size:16px;font-weight:700;background:rgba(10,10,30,.85);padding:6px 20px;border-radius:10px;display:inline-block;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1)}
-#game-score{font-size:28px;font-weight:800;margin-top:4px}
-#game-timer{font-size:14px;color:#fbbf24;margin-top:2px}
-#game-msg{font-size:13px;color:#ccc;margin-top:4px;opacity:0;transition:opacity .3s}
-#game-msg.show{opacity:1}
-#game-info{margin-top:6px;background:rgba(10,10,30,.85);padding:6px 14px;border-radius:8px;display:inline-block;font-size:11px;color:#cbd5e1;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);max-width:480px}
-#game-dist{margin-top:4px;font-size:13px;color:#4ade80;font-weight:600}
-#game-scoreboard{position:fixed;top:120px;left:12px;z-index:120;background:rgba(10,10,30,.9);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 10px;backdrop-filter:blur(12px);min-width:170px;font-size:11px;display:none;max-height:280px;overflow-y:auto}
-#game-scoreboard.show{display:block}
-#game-scoreboard h4{font-size:10px;color:#a3a3a3;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:4px}
-.sb-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
-.sb-row.you{background:rgba(59,130,246,.18);border-radius:4px;padding:3px 6px;margin:2px -4px}
-.sb-name{display:flex;align-items:center;gap:5px;font-size:11px}
-.sb-dot{width:8px;height:8px;border-radius:50%}
-.sb-score{font-weight:700;font-size:12px;color:#fbbf24}
-#race-arrow{position:fixed;z-index:110;width:70px;height:70px;pointer-events:none;display:none;filter:drop-shadow(0 0 14px rgba(34,197,94,.9));transition:transform .1s}
-#race-arrow.show{display:block}
-
-/* Countdown overlay */
-#countdown{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);font-size:120px;font-weight:900;color:#fff;text-shadow:0 0 40px rgba(99,102,241,.5)}
-#countdown.show{display:flex}
-
-/* Game end overlay */
-#game-end{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(6px)}
-#game-end.show{display:flex}
-.game-end-box{background:#12122a;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:40px;text-align:center;max-width:400px}
-.game-end-box h2{font-size:1.8em;margin-bottom:8px}
-.game-end-box .result{font-size:3em;font-weight:900;margin:12px 0;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.game-end-box .detail{font-size:13px;color:#888;margin-bottom:16px;line-height:1.6}
-.game-end-box button{padding:12px 30px;border-radius:12px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
-#end-leaderboard{display:none;margin:0 0 18px;max-height:260px;overflow-y:auto;text-align:left;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:12px}
-#end-leaderboard.show{display:block}
-#end-leaderboard .sb-row{padding:5px 2px}
-#end-leaderboard .sb-row.you{background:rgba(59,130,246,.22);border-radius:6px;padding:5px 8px;margin:2px -4px}
-#end-leaderboard .sb-name{font-size:13px}
-#end-leaderboard .sb-score{font-size:14px}
-#end-leaderboard .sb-medal{font-size:14px;margin-right:3px}
-#end-leaderboard .empty{color:#666;font-size:11px;text-align:center;padding:10px}
-#end-countdown{display:none;margin-top:14px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
-#end-countdown.show{display:block}
-#end-countdown-bar{height:100%;width:100%;background:linear-gradient(135deg,#fbbf24,#f59e0b);transform-origin:left center}
-#end-countdown-bar.run{transition:transform linear;transform:scaleX(0)}
-.game-end-box{max-width:500px}
-#end-ab-results{display:none;margin:0 0 18px;max-height:320px;overflow-y:auto;text-align:left;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:12px}
-#end-ab-results.show{display:block}
-.abr-q{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.06)}
-.abr-q:last-child{border-bottom:none}
-.abr-q-title{font-size:12px;font-weight:600;color:#e5e7eb;margin-bottom:6px}
-.abr-q-title .num{color:#9ca3af;font-weight:400;margin-right:4px}
-.abr-opts{display:flex;gap:8px;flex-wrap:wrap}
-.abr-opt{flex:1;min-width:140px;padding:6px 8px;border-radius:8px;font-size:11px;line-height:1.4}
-.abr-opt.a{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3)}
-.abr-opt.b{background:rgba(251,146,60,.15);border:1px solid rgba(251,146,60,.3)}
-.abr-opt .label{font-weight:700;margin-bottom:2px}
-.abr-opt.a .label{color:#93c5fd}
-.abr-opt.b .label{color:#fdba74}
-.abr-opt .text{color:#cbd5e1;margin-bottom:4px;font-size:11px}
-.abr-opt .names{color:#9ca3af;font-size:10px;display:flex;flex-wrap:wrap;gap:4px 6px}
-.abr-opt .name-chip{display:inline-flex;align-items:center;gap:3px}
-.abr-opt .name-chip .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
-.abr-opt .name-chip.you{color:#93c5fd;font-weight:600}
-.abr-noans{color:#6b7280;font-size:10px;margin-top:4px;font-style:italic}
-</style>
-</head>
-<body>
-<div id="login-screen">
-  <div class="login-box">
-    <h1>Virtual World</h1>
-    <p>Laufe herum, chatte & spiele Minigames mit deinem Team</p>
-    <input type="text" id="name-input" placeholder="Dein Name..." maxlength="16" autofocus>
-    <div class="color-picker" id="color-picker"></div>
-    <button onclick="joinWorld()">Beitreten</button>
-    <div class="login-credit">vibe coded by Minh with <span class="heart">&lt;3</span></div>
-  </div>
-</div>
-
-<div id="game-container" style="display:none">
-  <canvas id="world-canvas"></canvas>
-  <div id="hud">
-    <div class="hud-badge" id="hud-pos">0, 0</div>
-    <div class="hud-badge" id="hud-online">Online: 0</div>
-    <div class="hud-badge" id="hud-sprint" style="display:none">🏃 Sprint</div>
-  </div>
-  <div id="sprint-bar-wrap"><div id="sprint-bar"></div></div>
-  <div id="minimap"><canvas id="minimap-canvas" width="140" height="93"></canvas></div>
-  <div id="online-list"><h3>Online</h3><div id="online-entries"></div></div>
-  <div class="top-btns">
-    <button class="top-btn" onclick="toggleConfig()">🤖 Agents konfigurieren</button>
-    <button class="top-btn" id="agents-quick-toggle" onclick="quickToggleAgents()">👁 Agents An</button>
-    <button class="top-btn" onclick="openMinigameMenu()">🎮 Minigames</button>
-  </div>
-  <div id="controls-help">
-    <kbd>WASD</kbd> Laufen <kbd>Shift</kbd> Sprint <kbd>Enter</kbd> Chat <kbd>C</kbd> Chat <kbd>Tab</kbd> Config <kbd>M</kbd> Minigames <kbd>G</kbd> Agents An/Aus <kbd>Q</kbd> Spiel beenden
-  </div>
-  <!-- Mobile Touch Controls -->
-  <div id="mobile-controls">
-    <div id="joystick"><div id="joystick-knob"></div></div>
-    <div id="mobile-sprint">⚡</div>
-    <button id="mobile-chat-btn" title="Chat">💬</button>
-    <button id="mobile-mg-btn" onclick="openMinigameMenu()" title="Minigames">🎮</button>
-    <button id="mobile-stop-btn" onclick="stopGameEarly()" title="Beenden">✕</button>
-  </div>
-  <button id="chat-toggle-btn" onclick="toggleChatPanel()" title="Chat (C)">💬</button>
-  <div id="chat-panel">
-    <div id="chat-log"></div>
-    <div id="chat-input-area">
-      <input type="text" id="chat-input" placeholder="Nachricht..." maxlength="200">
-      <button id="chat-send" onclick="sendChat()">Senden</button>
-    </div>
-  </div>
-  <div id="game-hud"><div id="game-title"></div><div id="game-score"></div><div id="game-timer"></div><div id="game-dist"></div><div id="game-msg"></div><div id="game-info"></div><br><button id="stop-game-btn" onclick="stopGameEarly()">✕ Spiel beenden</button></div>
-  <div id="game-scoreboard"><h4 id="sb-title">Punktestand</h4><div id="sb-entries"></div></div>
-  <div id="race-arrow"><svg viewBox="0 0 64 64"><defs><filter id="glow"><feGaussianBlur stdDeviation="2"/></filter></defs><polygon points="32,4 52,40 38,40 38,60 26,60 26,40 12,40" fill="#22c55e" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><text x="32" y="34" font-size="16" fill="#fff" text-anchor="middle" font-weight="bold">🏁</text></svg></div>
-  <div id="countdown"></div>
-  <div id="game-end"><div class="game-end-box"><h2 id="end-title"></h2><div class="result" id="end-result"></div><div class="detail" id="end-detail"></div><div id="end-leaderboard"></div><div id="end-ab-results"></div><button onclick="closeGameEnd()">Weiter spielen</button><div id="end-countdown"><div id="end-countdown-bar"></div></div></div></div>
-</div>
-<script src="/socket.io/socket.io.js"></script>
-
-<!-- Config Overlay -->
-<div id="config-overlay">
-  <div id="config-panel">
-    <div class="config-header"><h2>🤖 Agent-Konfiguration</h2><button class="config-close" onclick="toggleConfig()">&times;</button></div>
-    <div class="global-controls">
-      <button class="btn-global" onclick="toggleAllAgents()">Alle An/Aus</button>
-      <button class="btn-global" onclick="resetAllAgents()">Reset</button>
-      <button class="btn-global" onclick="exportConfig()">Export</button>
-      <button class="btn-global" onclick="importConfigPrompt()">Import</button>
-    </div>
-    <div class="presets-row">
-      <span style="font-size:9px;color:#555;padding:4px 0;">Presets:</span>
-      <button class="preset-btn" onclick="loadPreset('party')">🎉 Party</button>
-      <button class="preset-btn" onclick="loadPreset('zen')">🧘 Zen</button>
-      <button class="preset-btn" onclick="loadPreset('chaos')">🌪️ Chaos</button>
-      <button class="preset-btn" onclick="loadPreset('minimal')">📦 Minimal</button>
-      <button class="preset-btn" onclick="loadPreset('army')">🎖️ Armee</button>
-    </div>
-    <div class="config-body" id="agent-config-list"></div>
-    <div class="add-agent-area"><button class="btn-add" onclick="addNewAgent()">+ Neuer Agent</button></div>
-  </div>
-</div>
-
-<!-- Minigame Menu -->
-<div id="minigame-overlay">
-  <div id="minigame-panel">
-    <h2>🎮 Minigames</h2>
-    <div id="mg-menu">
-      <div class="mg-card" onclick="showMgSetup('tag')">
-        <h3>🏷️ Fangen</h3>
-        <p>Ein Spieler ist "es" und muss die anderen fangen! Begrenztes Spielfeld, Sprint erlaubt.</p>
-      </div>
-      <div class="mg-card" onclick="showMgSetup('collect')">
-        <h3>⭐ Sammelspiel</h3>
-        <p>Sammle so viele Items wie möglich! Sie spawnen zufällig über die Map.</p>
-      </div>
-      <div class="mg-card" onclick="showMgSetup('ab')">
-        <h3>🅰️🅱️ A oder B</h3>
-        <p>Eine Frage erscheint — lauf zu Feld A oder Feld B! Definiere vorher deine Fragen.</p>
-      </div>
-      <div class="mg-card" onclick="showMgSetup('race')">
-        <h3>🏁 Wettrennen</h3>
-        <p>Renn von Start nach Ziel! Wer ist am schnellsten?</p>
-      </div>
-    </div>
-    <div id="mg-setup-area" style="display:none"></div>
-    <div style="text-align:center;margin-top:12px"><button class="top-btn" onclick="closeMinigameMenu()">Schließen</button></div>
-  </div>
-</div>
-
-<script>
 // ===================== SPRITE ENGINE =====================
 function createSpriteSheet(mainColor, darkColor, lightColor, isAgent) {
   const c = document.createElement('canvas'); c.width=48; c.height=64;
@@ -452,8 +129,7 @@ let shakeTime=0, shakeMag=0; // screen-shake
 const colorPicker=document.getElementById('color-picker');
 COLORS.forEach((c,i)=>{const el=document.createElement('div');el.className='color-opt'+(c===selectedColor?' selected':'');el.style.background=c;el.onclick=()=>{document.querySelectorAll('.color-opt').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');selectedColor=c;};colorPicker.appendChild(el);});
 document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')joinWorld();});
-let _joining=false;
-function joinWorld(){if(_joining)return;_joining=true;const name=document.getElementById('name-input').value.trim()||'Spieler';document.getElementById('login-screen').classList.add('hidden');setTimeout(()=>{document.getElementById('login-screen').style.display='none';document.getElementById('game-container').style.display='block';startGame(name,selectedColor);connectSocket(name,selectedColor);},500);}
+function joinWorld(){const name=document.getElementById('name-input').value.trim()||'Spieler';document.getElementById('login-screen').classList.add('hidden');setTimeout(()=>{document.getElementById('login-screen').style.display='none';document.getElementById('game-container').style.display='block';startGame(name,selectedColor);connectSocket(name,selectedColor);},500);}
 
 // ===================== MULTIPLAYER (Socket.io) =====================
 let socket=null, myId=null, lastMoveSent=0;
@@ -482,14 +158,6 @@ function connectSocket(name,color){
   socket.on('chat',m=>{addChatMsg(m.name,m.color,m.text,!!m.system,!!m.agent);
     if(!m.system){const e=entities.find(e2=>e2.name===m.name&&!e2.isAgent);if(e){e.speechText=m.text;e.speechTimer=4000;}}});
   socket.on('agents-update',arr=>{arr.forEach(a=>{const e=entities.find(e2=>e2.isAgent&&e2.agentId===a.id);if(e){e.x=a.x;e.y=a.y;e.dir=a.dir;e.frame=a.frame;e.moving=a.moving;}});});
-  // Agent-Sprechblasen (über dem Agent-Sprite). Kommt als separates Event vom Server.
-  socket.on('agent-speech',d=>{const e=entities.find(e2=>e2.isAgent&&e2.agentId===d.id);if(e){e.speechText=d.text;e.speechTimer=4000;}});
-  // Spieler-Sprechblasen: identifiziert per socketId, robust gegen Namens-Duplikate.
-  socket.on('speech',d=>{
-    if(d.id===myId&&player){player.speechText=d.text;player.speechTimer=4000;return;}
-    const e=entities.find(e2=>e2.remoteId===d.id);
-    if(e){e.speechText=d.text;e.speechTimer=4000;}
-  });
   socket.on('agents-state',d=>{agentsEnabled=d.enabled;if(d.configs)agentConfigs=d.configs;spawnAgentsFromConfig();
     const b=document.getElementById('agents-quick-toggle');if(b){b.textContent=agentsEnabled?'👁 Agents An':'🚫 Agents Aus';b.classList.toggle('agents-off',!agentsEnabled);}});
   socket.on('disconnect',()=>addChatMsg('System','','⚠️ Verbindung verloren.',true));
@@ -503,7 +171,7 @@ function connectSocket(name,color){
     const iv=setInterval(()=>{cnt--;if(cnt>0)cd.textContent=cnt;else{cd.textContent='GO!';clearInterval(iv);setTimeout(()=>{
       cd.classList.remove('show');
       // Activate game using server state
-      activeGame={type:g.type,duration:g.duration,elapsed:0,startTime:g.startTime,score:0,simScores:{},arena:g.arena,questions:g.questions,timePerQ:g.timePerQ,currentQ:0,questionTimer:0,finished:false,finishTime:0,tagger:g.tagger};
+      activeGame={type:g.type,duration:g.duration,elapsed:0,startTime:g.startTime,score:0,simScores:{},arena:g.arena,questions:g.questions,timePerQ:g.timePerQ,currentQ:0,questionTimer:0,finished:false,finishTime:0};
       gameItems=d.gameItems||[];abZones=d.abZones;raceGoal=d.raceGoal;
       const hud=document.getElementById('game-hud');hud.classList.add('show');
       const titles={tag:'🏷️ FANGEN',collect:'⭐ SAMMELN',race:'🏁 WETTRENNEN',ab:'🅰️🅱️ A ODER B'};
@@ -585,15 +253,9 @@ function connectSocket(name,color){
     if(e){
       e.tagged=true;
       spawnCollectParticles(e.x+8,e.y+8,'#ef4444');
-      e.speechText='Oh nein! 😱';e.speechTimer=2000;
       // Shake more if we are the victim
       if(player&&d.targetId===myId)triggerShake(3.5,300);
       else triggerShake(1.2,160);
-    }
-    // Wenn ich der Tagger bin, eigenen Score-HUD aktualisieren
-    if(d.taggerId===myId&&activeGame&&activeGame.type==='tag'){
-      activeGame.score=(activeGame.score||0)+1;
-      document.getElementById('game-score').textContent='Gefangen: '+activeGame.score;
     }
   });
   // A/B Events
@@ -769,27 +431,18 @@ function updateMinigame(dt){
   document.getElementById('game-timer').textContent=Math.ceil(remaining/1000)+'s';
 
   if(activeGame.type==='tag'){
-    // Nur der Tagger prüft Kollisionen. Sonst: Ghost-Tags die der Server ablehnt,
-    // die aber lokal schon angezeigt wurden → Desync zwischen Clients.
-    const mp=socket&&socket.connected;
-    const iAmTagger=!mp||!activeGame.tagger||activeGame.tagger===myId;
-    if(!iAmTagger)return;
+    // Check tag collisions with other players (remote/sim)
     entities.forEach(e=>{
       if(e===player||e.tagged||e.isAgent)return;
       if(distance(e,player)<14){
-        if(mp&&e.remoteId){
-          // Server ist autoritativ — player-tagged Event liefert tagged/shake/partikel zurück
-          socket.emit('tag-player',e.remoteId);
-          e._tagCooldown=Date.now()+600; // verhindert mehrfach-emit bis Server antwortet
-        } else {
-          // Single-Player: lokal anwenden
-          e.tagged=true;activeGame.score=(activeGame.score||0)+1;
-          document.getElementById('game-score').textContent='Gefangen: '+activeGame.score;
-          e.speechText='Oh nein! 😱';e.speechTimer=2000;
-          triggerShake(2.4,220);
-          spawnCollectParticles(e.x+8,e.y+8,'#ef4444');
-          addChatMsg('System','',`${player.name} hat ${e.name} gefangen!`,true);
-        }
+        e.tagged=true;activeGame.score=(activeGame.score||0)+1;
+        document.getElementById('game-score').textContent='Gefangen: '+activeGame.score;
+        e.speechText='Oh nein! 😱';e.speechTimer=2000;
+        // visual feedback: shake + red burst
+        triggerShake(2.4,220);
+        spawnCollectParticles(e.x+8,e.y+8,'#ef4444');
+        if(socket&&socket.connected&&e.remoteId)socket.emit('tag-player',e.remoteId);
+        else addChatMsg('System','',`${player.name} hat ${e.name} gefangen!`,true);
       }
     });
   }
@@ -1430,21 +1083,7 @@ const vw=canvas.width/SCALE,vh=canvas.height/SCALE;mx.strokeStyle='rgba(255,255,
 function updateOnlineList(){document.getElementById('online-entries').innerHTML=entities.map(e=>`<div class="online-entry"><div class="online-dot" style="background:${e.color}"></div><span>${e.isAgent?'🤖 ':''}${e.name}${e===player?' (Du)':''}${e.tagged?' ❌':''}</span></div>`).join('');}
 
 // ===================== CHAT =====================
-function addChatMsg(n,c,t,sys=false,ag=false){
-  const log=document.getElementById('chat-log'),d=document.createElement('div');
-  d.className='chat-msg'+(sys?' system':'')+(ag?' agent':'');
-  // System-Messages haben oft Emoji aber dürfen KEIN HTML enthalten — escapen.
-  // User-Messages: Name + Farbe streng escapen (Farbe als Hex-Whitelist).
-  if(sys){d.textContent=String(t==null?'':t);}
-  else{
-    const nameSpan=document.createElement('span');nameSpan.className='name';
-    const safeColor=(typeof c==='string'&&/^#[0-9a-fA-F]{3,8}$/.test(c.trim()))?c.trim():'#888';
-    nameSpan.style.color=safeColor;
-    nameSpan.textContent=String(n==null?'':n)+':';
-    d.appendChild(nameSpan);d.appendChild(document.createTextNode(' '+String(t==null?'':t)));
-  }
-  log.appendChild(d);log.scrollTop=log.scrollHeight;
-}
+function addChatMsg(n,c,t,sys=false,ag=false){const log=document.getElementById('chat-log'),d=document.createElement('div');d.className='chat-msg'+(sys?' system':'')+(ag?' agent':'');d.innerHTML=sys?t:`<span class="name" style="color:${c}">${n}:</span> ${esc(t)}`;log.appendChild(d);log.scrollTop=log.scrollHeight;}
 function sendChat(){const inp=document.getElementById('chat-input'),t=inp.value.trim();if(!t)return;player.speechText=t;player.speechTimer=4000;inp.value='';
 if(socket&&socket.connected){socket.emit('chat',t);return;}
 addChatMsg(player.name,player.color,t);
@@ -1485,18 +1124,16 @@ function renderConfigPanel(){document.getElementById('agent-config-list').innerH
       <button class="btn-sm btn-success" onclick="tpAgent(${i})">📍</button>
       <button class="btn-sm btn-danger" onclick="rmAgent(${i})">🗑</button></div>
   </div></div>`).join('');}
-let _syncCfgTimer=null;
-function syncAgentConfigs(){if(!socket||!socket.connected)return;clearTimeout(_syncCfgTimer);_syncCfgTimer=setTimeout(()=>{socket.emit('update-agent-configs',agentConfigs);},250);}
-function uCfg(i,k,v){agentConfigs[i][k]=v;const a=entities.find(e=>e.isAgent&&e.agentCfg===agentConfigs[i]);if(a){if(k==='name')a.name=v;if(k==='color'){a.color=v;rebuildSprite(a);}}syncAgentConfigs();}
-function tAgent(i){agentConfigs[i].active=!agentConfigs[i].active;spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}
+function uCfg(i,k,v){agentConfigs[i][k]=v;const a=entities.find(e=>e.isAgent&&e.agentCfg===agentConfigs[i]);if(a){if(k==='name')a.name=v;if(k==='color'){a.color=v;rebuildSprite(a);}}}
+function tAgent(i){agentConfigs[i].active=!agentConfigs[i].active;spawnAgentsFromConfig();renderConfigPanel();}
 function tpAgent(i){const a=entities.find(e=>e.isAgent&&e.agentCfg===agentConfigs[i]);if(a){a.x=player.x+(Math.random()-.5)*80;a.y=player.y+(Math.random()-.5)*80;}}
-function rmAgent(i){agentConfigs.splice(i,1);spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}
-function addNewAgent(){const pk=Object.keys(PERSONALITIES);agentConfigs.push({name:`Agent ${agentConfigs.length+1}`,color:`hsl(${Math.random()*360},70%,50%)`,personality:pk[Math.floor(Math.random()*pk.length)],speed:1+Math.random()*1.5,chatFreq:8+Math.floor(Math.random()*15),wanderRadius:200+Math.floor(Math.random()*400),active:true,customMsgs:[]});spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}
-function toggleAllAgents(){const any=agentConfigs.some(c=>c.active);agentConfigs.forEach(c=>c.active=!any);spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}
-function resetAllAgents(){agentConfigs=JSON.parse(JSON.stringify(DEFAULT_AGENTS));spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}
+function rmAgent(i){agentConfigs.splice(i,1);spawnAgentsFromConfig();renderConfigPanel();}
+function addNewAgent(){const pk=Object.keys(PERSONALITIES);agentConfigs.push({name:`Agent ${agentConfigs.length+1}`,color:`hsl(${Math.random()*360},70%,50%)`,personality:pk[Math.floor(Math.random()*pk.length)],speed:1+Math.random()*1.5,chatFreq:8+Math.floor(Math.random()*15),wanderRadius:200+Math.floor(Math.random()*400),active:true,customMsgs:[]});spawnAgentsFromConfig();renderConfigPanel();}
+function toggleAllAgents(){const any=agentConfigs.some(c=>c.active);agentConfigs.forEach(c=>c.active=!any);spawnAgentsFromConfig();renderConfigPanel();}
+function resetAllAgents(){agentConfigs=JSON.parse(JSON.stringify(DEFAULT_AGENTS));spawnAgentsFromConfig();renderConfigPanel();}
 function exportConfig(){navigator.clipboard.writeText(JSON.stringify(agentConfigs,null,2)).then(()=>addChatMsg('System','','Config kopiert!',true)).catch(()=>prompt('Config:',JSON.stringify(agentConfigs)));}
-function importConfigPrompt(){const j=prompt('JSON:');if(!j)return;try{const p=JSON.parse(j);if(Array.isArray(p)){agentConfigs=p;spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}}catch(e){alert('Ungültig!');}}
-function loadPreset(p){const presets={party:[{name:'DJ Bot',color:'#f43f5e',personality:'energetisch',speed:3,chatFreq:5,wanderRadius:600,active:true},{name:'Confetti',color:'#fbbf24',personality:'witzig',speed:4,chatFreq:4,wanderRadius:800,active:true}],zen:[{name:'Sensei',color:'#6ee7b7',personality:'philosophisch',speed:.3,chatFreq:30,wanderRadius:150,active:true}],chaos:Array.from({length:10},(_,i)=>({name:`C-${i+1}`,color:`hsl(${i*36},80%,55%)`,personality:Object.keys(PERSONALITIES)[i%6],speed:2+Math.random()*3,chatFreq:3,wanderRadius:600,active:true})),minimal:[{name:'Helper',color:'#3b82f6',personality:'freundlich',speed:1,chatFreq:20,wanderRadius:300,active:true}],army:Array.from({length:8},(_,i)=>({name:`Soldat ${i+1}`,color:`hsl(${120+i*5},40%,${30+i*3}%)`,personality:'technisch',speed:2,chatFreq:10,wanderRadius:200,active:true}))};if(presets[p]){agentConfigs=presets[p];spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}}
+function importConfigPrompt(){const j=prompt('JSON:');if(!j)return;try{const p=JSON.parse(j);if(Array.isArray(p)){agentConfigs=p;spawnAgentsFromConfig();renderConfigPanel();}}catch(e){alert('Ungültig!');}}
+function loadPreset(p){const presets={party:[{name:'DJ Bot',color:'#f43f5e',personality:'energetisch',speed:3,chatFreq:5,wanderRadius:600,active:true},{name:'Confetti',color:'#fbbf24',personality:'witzig',speed:4,chatFreq:4,wanderRadius:800,active:true}],zen:[{name:'Sensei',color:'#6ee7b7',personality:'philosophisch',speed:.3,chatFreq:30,wanderRadius:150,active:true}],chaos:Array.from({length:10},(_,i)=>({name:`C-${i+1}`,color:`hsl(${i*36},80%,55%)`,personality:Object.keys(PERSONALITIES)[i%6],speed:2+Math.random()*3,chatFreq:3,wanderRadius:600,active:true})),minimal:[{name:'Helper',color:'#3b82f6',personality:'freundlich',speed:1,chatFreq:20,wanderRadius:300,active:true}],army:Array.from({length:8},(_,i)=>({name:`Soldat ${i+1}`,color:`hsl(${120+i*5},40%,${30+i*3}%)`,personality:'technisch',speed:2,chatFreq:10,wanderRadius:200,active:true}))};if(presets[p]){agentConfigs=presets[p];spawnAgentsFromConfig();renderConfigPanel();}}
 
 // ===================== INPUT =====================
 document.addEventListener('keydown',e=>{
@@ -1608,6 +1245,3 @@ document.getElementById('chat-input').addEventListener('blur',()=>{chatFocused=f
 function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
 function distance(a,b){return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);}
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-</script>
-</body>
-</html>
