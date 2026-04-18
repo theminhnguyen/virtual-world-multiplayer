@@ -17,6 +17,14 @@ body{background:#0a0a1a;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;o
 .login-box button{display:block;width:280px;margin:16px auto 0;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:1.1em;cursor:pointer;font-weight:600;transition:transform .2s}
 .login-box button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(59,130,246,.4)}
 .login-credit{margin-top:22px;font-size:.72em;color:rgba(255,255,255,.35);letter-spacing:.3px;font-style:italic}
+/* Language switcher (login screen + in-game) */
+.lang-switch{display:flex;gap:6px;justify-content:center;margin:0 0 16px}
+.lang-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:#aaa;padding:5px 12px;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:.5px}
+.lang-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.lang-btn.active{background:rgba(59,130,246,.22);border-color:#3b82f6;color:#93c5fd}
+#lang-top{position:fixed;top:12px;right:160px;z-index:400;display:flex;gap:4px;pointer-events:auto}
+#lang-top .lang-btn{padding:4px 9px;font-size:10px;background:rgba(10,10,30,.85);backdrop-filter:blur(10px)}
+@media (max-width:720px){#lang-top{right:12px;top:auto;bottom:12px;left:12px;justify-content:flex-start}}
 /* ===== MOBILE CONTROLS ===== */
 #mobile-controls{position:fixed;inset:0;pointer-events:none;z-index:300;display:none}
 #mobile-controls.show{display:block}
@@ -220,11 +228,15 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
 <body>
 <div id="login-screen">
   <div class="login-box">
-    <h1>Virtual World</h1>
-    <p>Laufe herum, chatte & spiele Minigames mit deinem Team</p>
+    <h1 data-i18n="title">Virtual World</h1>
+    <p data-i18n="tagline">Laufe herum, chatte & spiele Minigames mit deinem Team</p>
+    <div class="lang-switch" id="login-lang-switch">
+      <button class="lang-btn" data-lang="de">🇩🇪 Deutsch</button>
+      <button class="lang-btn" data-lang="en">🇬🇧 English</button>
+    </div>
     <input type="text" id="name-input" placeholder="Dein Name..." maxlength="16" autofocus>
     <div class="color-picker" id="color-picker"></div>
-    <button onclick="joinWorld()">Beitreten</button>
+    <button onclick="joinWorld()" data-i18n="join">Beitreten</button>
     <div class="login-credit">vibe coded by Minh with <span class="heart">&lt;3</span></div>
   </div>
 </div>
@@ -238,14 +250,18 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
   </div>
   <div id="sprint-bar-wrap"><div id="sprint-bar"></div></div>
   <div id="minimap"><canvas id="minimap-canvas" width="140" height="93"></canvas></div>
-  <div id="online-list"><h3>Online</h3><div id="online-entries"></div></div>
+  <div id="online-list"><h3 data-i18n="online">Online</h3><div id="online-entries"></div></div>
   <div class="top-btns">
-    <button class="top-btn" onclick="toggleConfig()">🤖 Agents konfigurieren</button>
-    <button class="top-btn" id="agents-quick-toggle" onclick="quickToggleAgents()">👁 Agents An</button>
-    <button class="top-btn" onclick="openMinigameMenu()">🎮 Minigames</button>
+    <button class="top-btn" onclick="toggleConfig()" data-i18n="btn_config">🤖 Agents konfigurieren</button>
+    <button class="top-btn" id="agents-quick-toggle" onclick="quickToggleAgents()" data-i18n="btn_agents_on">👁 Agents An</button>
+    <button class="top-btn" onclick="openMinigameMenu()" data-i18n="btn_minigames">🎮 Minigames</button>
+  </div>
+  <div id="lang-top">
+    <button class="lang-btn" data-lang="de">DE</button>
+    <button class="lang-btn" data-lang="en">EN</button>
   </div>
   <div id="controls-help">
-    <kbd>WASD</kbd> Laufen <kbd>Shift</kbd> Sprint <kbd>Enter</kbd> Chat <kbd>C</kbd> Chat <kbd>Tab</kbd> Config <kbd>M</kbd> Minigames <kbd>G</kbd> Agents An/Aus <kbd>Q</kbd> Spiel beenden
+    <kbd>WASD</kbd> <span data-i18n="ctl_walk">Laufen</span> <kbd>Shift</kbd> <span data-i18n="ctl_sprint">Sprint</span> <kbd>Enter</kbd> <span data-i18n="ctl_chat">Chat</span> <kbd>C</kbd> <span data-i18n="ctl_chat">Chat</span> <kbd>Tab</kbd> <span data-i18n="ctl_config">Config</span> <kbd>M</kbd> <span data-i18n="ctl_mg">Minigames</span> <kbd>G</kbd> <span data-i18n="ctl_agents">Agents An/Aus</span> <kbd>Q</kbd> <span data-i18n="ctl_stop">Spiel beenden</span>
   </div>
   <!-- Mobile Touch Controls -->
   <div id="mobile-controls">
@@ -260,64 +276,64 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
     <div id="chat-log"></div>
     <div id="chat-input-area">
       <input type="text" id="chat-input" placeholder="Nachricht..." maxlength="200">
-      <button id="chat-send" onclick="sendChat()">Senden</button>
+      <button id="chat-send" onclick="sendChat()" data-i18n="send">Senden</button>
     </div>
   </div>
-  <div id="game-hud"><div id="game-title"></div><div id="game-score"></div><div id="game-timer"></div><div id="game-dist"></div><div id="game-msg"></div><div id="game-info"></div><br><button id="stop-game-btn" onclick="stopGameEarly()">✕ Spiel beenden</button></div>
-  <div id="game-scoreboard"><h4 id="sb-title">Punktestand</h4><div id="sb-entries"></div></div>
+  <div id="game-hud"><div id="game-title"></div><div id="game-score"></div><div id="game-timer"></div><div id="game-dist"></div><div id="game-msg"></div><div id="game-info"></div><br><button id="stop-game-btn" onclick="stopGameEarly()" data-i18n="btn_stop_game">✕ Spiel beenden</button></div>
+  <div id="game-scoreboard"><h4 id="sb-title" data-i18n="scoreboard">Punktestand</h4><div id="sb-entries"></div></div>
   <div id="race-arrow"><svg viewBox="0 0 64 64"><defs><filter id="glow"><feGaussianBlur stdDeviation="2"/></filter></defs><polygon points="32,4 52,40 38,40 38,60 26,60 26,40 12,40" fill="#22c55e" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><text x="32" y="34" font-size="16" fill="#fff" text-anchor="middle" font-weight="bold">🏁</text></svg></div>
   <div id="countdown"></div>
-  <div id="game-end"><div class="game-end-box"><h2 id="end-title"></h2><div class="result" id="end-result"></div><div class="detail" id="end-detail"></div><div id="end-leaderboard"></div><div id="end-ab-results"></div><button onclick="closeGameEnd()">Weiter spielen</button><div id="end-countdown"><div id="end-countdown-bar"></div></div></div></div>
+  <div id="game-end"><div class="game-end-box"><h2 id="end-title"></h2><div class="result" id="end-result"></div><div class="detail" id="end-detail"></div><div id="end-leaderboard"></div><div id="end-ab-results"></div><button onclick="closeGameEnd()" data-i18n="btn_continue">Weiter spielen</button><div id="end-countdown"><div id="end-countdown-bar"></div></div></div></div>
 </div>
 <script src="/socket.io/socket.io.js"></script>
 
 <!-- Config Overlay -->
 <div id="config-overlay">
   <div id="config-panel">
-    <div class="config-header"><h2>🤖 Agent-Konfiguration</h2><button class="config-close" onclick="toggleConfig()">&times;</button></div>
+    <div class="config-header"><h2 data-i18n="agents_cfg_title">🤖 Agent-Konfiguration</h2><button class="config-close" onclick="toggleConfig()">&times;</button></div>
     <div class="global-controls">
-      <button class="btn-global" onclick="toggleAllAgents()">Alle An/Aus</button>
-      <button class="btn-global" onclick="resetAllAgents()">Reset</button>
-      <button class="btn-global" onclick="exportConfig()">Export</button>
-      <button class="btn-global" onclick="importConfigPrompt()">Import</button>
+      <button class="btn-global" onclick="toggleAllAgents()" data-i18n="cfg_toggle_all">Alle An/Aus</button>
+      <button class="btn-global" onclick="resetAllAgents()" data-i18n="cfg_reset">Reset</button>
+      <button class="btn-global" onclick="exportConfig()" data-i18n="cfg_export">Export</button>
+      <button class="btn-global" onclick="importConfigPrompt()" data-i18n="cfg_import">Import</button>
     </div>
     <div class="presets-row">
-      <span style="font-size:9px;color:#555;padding:4px 0;">Presets:</span>
-      <button class="preset-btn" onclick="loadPreset('party')">🎉 Party</button>
-      <button class="preset-btn" onclick="loadPreset('zen')">🧘 Zen</button>
-      <button class="preset-btn" onclick="loadPreset('chaos')">🌪️ Chaos</button>
-      <button class="preset-btn" onclick="loadPreset('minimal')">📦 Minimal</button>
-      <button class="preset-btn" onclick="loadPreset('army')">🎖️ Armee</button>
+      <span style="font-size:9px;color:#555;padding:4px 0;" data-i18n="presets">Presets:</span>
+      <button class="preset-btn" onclick="loadPreset('party')" data-i18n="preset_party">🎉 Party</button>
+      <button class="preset-btn" onclick="loadPreset('zen')" data-i18n="preset_zen">🧘 Zen</button>
+      <button class="preset-btn" onclick="loadPreset('chaos')" data-i18n="preset_chaos">🌪️ Chaos</button>
+      <button class="preset-btn" onclick="loadPreset('minimal')" data-i18n="preset_minimal">📦 Minimal</button>
+      <button class="preset-btn" onclick="loadPreset('army')" data-i18n="preset_army">🎖️ Armee</button>
     </div>
     <div class="config-body" id="agent-config-list"></div>
-    <div class="add-agent-area"><button class="btn-add" onclick="addNewAgent()">+ Neuer Agent</button></div>
+    <div class="add-agent-area"><button class="btn-add" onclick="addNewAgent()" data-i18n="cfg_new_agent">+ Neuer Agent</button></div>
   </div>
 </div>
 
 <!-- Minigame Menu -->
 <div id="minigame-overlay">
   <div id="minigame-panel">
-    <h2>🎮 Minigames</h2>
+    <h2 data-i18n="mg_title">🎮 Minigames</h2>
     <div id="mg-menu">
       <div class="mg-card" onclick="showMgSetup('tag')">
-        <h3>🏷️ Fangen</h3>
-        <p>Ein Spieler ist "es" und muss die anderen fangen! Begrenztes Spielfeld, Sprint erlaubt.</p>
+        <h3 data-i18n="mg_tag_title">🏷️ Fangen</h3>
+        <p data-i18n="mg_tag_desc">Ein Spieler ist "es" und muss die anderen fangen! Begrenztes Spielfeld, Sprint erlaubt.</p>
       </div>
       <div class="mg-card" onclick="showMgSetup('collect')">
-        <h3>⭐ Sammelspiel</h3>
-        <p>Sammle so viele Items wie möglich! Sie spawnen zufällig über die Map.</p>
+        <h3 data-i18n="mg_col_title">⭐ Sammelspiel</h3>
+        <p data-i18n="mg_col_desc">Sammle so viele Items wie möglich! Sie spawnen zufällig über die Map.</p>
       </div>
       <div class="mg-card" onclick="showMgSetup('ab')">
-        <h3>🅰️🅱️ A oder B</h3>
-        <p>Eine Frage erscheint — lauf zu Feld A oder Feld B! Definiere vorher deine Fragen.</p>
+        <h3 data-i18n="mg_ab_title">🅰️🅱️ A oder B</h3>
+        <p data-i18n="mg_ab_desc">Eine Frage erscheint — lauf zu Feld A oder Feld B! Definiere vorher deine Fragen.</p>
       </div>
       <div class="mg-card" onclick="showMgSetup('race')">
-        <h3>🏁 Wettrennen</h3>
-        <p>Renn von Start nach Ziel! Wer ist am schnellsten?</p>
+        <h3 data-i18n="mg_race_title">🏁 Wettrennen</h3>
+        <p data-i18n="mg_race_desc">Renn von Start nach Ziel! Wer ist am schnellsten?</p>
       </div>
     </div>
     <div id="mg-setup-area" style="display:none"></div>
-    <div style="text-align:center;margin-top:12px"><button class="top-btn" onclick="closeMinigameMenu()">Schließen</button></div>
+    <div style="text-align:center;margin-top:12px"><button class="top-btn" onclick="closeMinigameMenu()" data-i18n="close">Schließen</button></div>
   </div>
 </div>
 
@@ -406,14 +422,255 @@ function lighten(h,a=50){const[r,g,b]=hexToC(h);return`rgb(${Math.min(255,r+a)},
 // ===================== CONFIG =====================
 const WORLD_W=3000,WORLD_H=2000,SCALE=3,MOVE_SPEED=2.2,SPRINT_SPEED=4.2,SPRINT_MAX=100;
 const COLORS=['#3b82f6','#ef4444','#22c55e','#f59e0b','#a855f7','#ec4899','#06b6d4','#f97316'];
+// Persönlichkeiten haben Labels pro Sprache (labelDe/labelEn) und bilinguale Msg-Listen.
+// t('p.<key>') wird zur Laufzeit aufgelöst.
 const PERSONALITIES={
-  freundlich:{label:'Freundlich',emoji:'😊',msgs:["Hey! 👋","Wie geht's?","Willkommen!","Schönen Tag! 🌞"]},
-  witzig:{label:'Witzig',emoji:'😂',msgs:["Warum laufen Coder nie raus? Kein Windows! 😄","lol","404: Witz not found... PSYCH!","Bin ich witzig? KI sagt ja!"]},
-  philosophisch:{label:'Philosophisch',emoji:'🤔',msgs:["Was bedeutet virtuelle Existenz?","Bin ich echt?","Jeder Pixel erzählt...","Zeit ist relativ in Game Loops."]},
-  technisch:{label:'Technisch',emoji:'💻',msgs:["Latenz: 16ms. Optimal!","3000x2000px. Beeindruckend.","FPS stabil!","Pathfinding: geradeaus!"]},
-  mysterioes:{label:'Mysteriös',emoji:'🌙',msgs:["Psst... Schatten gesehen?","Ich weiß Dinge...","*flüstert* Wahrheit im Code.","Siehst du das auch...?"]},
-  energetisch:{label:'Energetisch',emoji:'⚡',msgs:["YOOO! 🔥🔥","LET'S GO!!!","HYYYPE! 🎉","Keine Zeit zum Stehen!"]},
+  freundlich:{labelDe:'Freundlich',labelEn:'Friendly',emoji:'😊',msgs:[
+    {de:"Hey! 👋",en:"Hey! 👋"},{de:"Wie geht's?",en:"How's it going?"},{de:"Willkommen!",en:"Welcome!"},{de:"Schönen Tag! 🌞",en:"Have a nice day! 🌞"}]},
+  witzig:{labelDe:'Witzig',labelEn:'Funny',emoji:'😂',msgs:[
+    {de:"Warum laufen Coder nie raus? Kein Windows! 😄",en:"Why don't coders go outside? Too many bugs! 🐛"},{de:"lol",en:"lol"},{de:"404: Witz not found... PSYCH!",en:"404: joke not found... PSYCH!"},{de:"Bin ich witzig? KI sagt ja!",en:"Am I funny? AI says yes!"}]},
+  philosophisch:{labelDe:'Philosophisch',labelEn:'Philosophical',emoji:'🤔',msgs:[
+    {de:"Was bedeutet virtuelle Existenz?",en:"What is virtual existence?"},{de:"Bin ich echt?",en:"Am I real?"},{de:"Jeder Pixel erzählt...",en:"Every pixel tells a story..."},{de:"Zeit ist relativ in Game Loops.",en:"Time is relative in game loops."}]},
+  technisch:{labelDe:'Technisch',labelEn:'Technical',emoji:'💻',msgs:[
+    {de:"Latenz: 16ms. Optimal!",en:"Latency: 16ms. Optimal!"},{de:"3000x2000px. Beeindruckend.",en:"3000x2000px. Impressive."},{de:"FPS stabil!",en:"FPS stable!"},{de:"Pathfinding: geradeaus!",en:"Pathfinding: straight line!"}]},
+  mysterioes:{labelDe:'Mysteriös',labelEn:'Mysterious',emoji:'🌙',msgs:[
+    {de:"Psst... Schatten gesehen?",en:"Psst... saw the shadow?"},{de:"Ich weiß Dinge...",en:"I know things..."},{de:"*flüstert* Wahrheit im Code.",en:"*whispers* truth is in the code."},{de:"Siehst du das auch...?",en:"Do you see it too...?"}]},
+  energetisch:{labelDe:'Energetisch',labelEn:'Energetic',emoji:'⚡',msgs:[
+    {de:"YOOO! 🔥🔥",en:"YOOO! 🔥🔥"},{de:"LET'S GO!!!",en:"LET'S GO!!!"},{de:"HYYYPE! 🎉",en:"HYYYPE! 🎉"},{de:"Keine Zeit zum Stehen!",en:"No time to stand still!"}]},
 };
+
+// ===================== I18N =====================
+// Sprachwahl aus localStorage, sonst Browser-Default, sonst DE.
+let LANG = (function(){
+  try {
+    const saved = localStorage.getItem('worldLang');
+    if (saved==='de'||saved==='en') return saved;
+  } catch(e){}
+  const nav=(navigator.language||'de').toLowerCase();
+  return nav.startsWith('en') ? 'en' : 'de';
+})();
+const I18N = {
+  de: {
+    title:'Virtual World', tagline:'Laufe herum, chatte & spiele Minigames mit deinem Team',
+    name_placeholder:'Dein Name...', chat_placeholder:'Nachricht...', join:'Beitreten', send:'Senden',
+    close:'Schließen', online:'Online', scoreboard:'Punktestand',
+    you_suffix:' (Du)',
+    // Buttons
+    btn_config:'🤖 Agents konfigurieren', btn_agents_on:'👁 Agents An', btn_agents_off:'🚫 Agents Aus',
+    btn_minigames:'🎮 Minigames', btn_stop_game:'✕ Spiel beenden', btn_continue:'Weiter spielen',
+    // Controls help
+    ctl_walk:'Laufen', ctl_sprint:'Sprint', ctl_chat:'Chat', ctl_config:'Config', ctl_mg:'Minigames', ctl_agents:'Agents An/Aus', ctl_stop:'Spiel beenden',
+    // Agent config panel
+    agents_cfg_title:'🤖 Agent-Konfiguration',
+    cfg_toggle_all:'Alle An/Aus', cfg_reset:'Reset', cfg_export:'Export', cfg_import:'Import',
+    presets:'Presets:', preset_party:'🎉 Party', preset_zen:'🧘 Zen', preset_chaos:'🌪️ Chaos', preset_minimal:'📦 Minimal', preset_army:'🎖️ Armee',
+    cfg_new_agent:'+ Neuer Agent',
+    cfg_name:'Name', cfg_color:'Farbe', cfg_personality:'Persönlichkeit', cfg_speed:'Speed', cfg_chatfreq:'Chat-Freq', cfg_wander:'Wanderradius', cfg_custom:'Eigene Msgs',
+    status_on:'An', status_off:'Aus',
+    // Minigame menu
+    mg_title:'🎮 Minigames',
+    mg_tag_title:'🏷️ Fangen', mg_tag_desc:'Ein Spieler ist "es" und muss die anderen fangen! Begrenztes Spielfeld, Sprint erlaubt.',
+    mg_col_title:'⭐ Sammelspiel', mg_col_desc:'Sammle so viele Items wie möglich! Sie spawnen zufällig über die Map.',
+    mg_ab_title:'🅰️🅱️ A oder B', mg_ab_desc:'Eine Frage erscheint — lauf zu Feld A oder Feld B! Definiere vorher deine Fragen.',
+    mg_race_title:'🏁 Wettrennen', mg_race_desc:'Renn von Start nach Ziel! Wer ist am schnellsten?',
+    // Minigame setup
+    mg_tag_setup:'🏷️ Fangen — Setup', mg_col_setup:'⭐ Sammelspiel — Setup', mg_ab_setup:'🅰️🅱️ A oder B — Setup', mg_race_setup:'🏁 Wettrennen — Setup',
+    mg_duration:'Dauer (Sekunden)', mg_arena:'Spielfeld-Größe',
+    size_small:'Klein (400x300)', size_medium:'Mittel (600x450)', size_large:'Groß (900x600)',
+    mg_tag_hint:'Du bist "es" — fang so viele wie möglich! Sprint mit Shift.',
+    mg_tag_start:'🏷️ Fangen starten!',
+    mg_col_hint:'Lauf über Items um sie einzusammeln! ⭐=1, 💰=2, 💎=3, 🏆=5 Punkte',
+    mg_col_start:'⭐ Sammeln starten!',
+    mg_ab_questions:'Fragen (eine pro Zeile, Format: Frage | Antwort A | Antwort B)',
+    mg_ab_default:'Bücher oder Kino? | Bücher | Kino\nBerge oder Meer? | Berge | Meer\nFrühaufsteher oder Nachteule? | Frühaufsteher | Nachteule\nPizza oder Pasta? | Pizza | Pasta\nHome Office oder Büro? | Home Office | Büro',
+    mg_ab_time:'Zeit pro Frage (Sekunden)', mg_ab_start:'🅰️🅱️ Starten!',
+    mg_ab_alert_empty:'Bitte mindestens eine Frage eingeben!',
+    mg_race_limit:'Zeitlimit (Sekunden)', mg_race_dist:'Distanz',
+    dist_short:'Kurz (~400px)', dist_medium:'Mittel (~800px)', dist_long:'Lang (~1400px)',
+    mg_race_hint:'Renn vom Start zum Ziel! Sprint mit Shift.', mg_race_start:'🏁 Rennen starten!',
+    // Game titles + HUD
+    gt_tag:'🏷️ FANGEN', gt_col:'⭐ SAMMELN', gt_race:'🏁 WETTRENNEN', gt_ab:'🅰️🅱️ A ODER B',
+    score_col:'⭐ {n} Punkte', score_tag:'Gefangen: {n}', score_race_goto:'Lauf zum Ziel!',
+    tag_caught_msg:'Gefangen: {n}', caught_bubble:'Oh nein! 😱',
+    info_col_legend:'<span class="legend-item">⭐ 1P</span><span class="legend-item">🍎 1P</span><span class="legend-item">💰 2P</span><span class="legend-item">💎 3P</span><span class="legend-item">🏆 5P</span> — laufe drüber zum Einsammeln',
+    info_col_legend_short:'<span class="legend-item">⭐ 1P</span><span class="legend-item">🍎 1P</span><span class="legend-item">💰 2P</span><span class="legend-item">💎 3P</span><span class="legend-item">🏆 5P</span> — laufe drüber',
+    info_race:'🏁 Ziel ist markiert (grüner Pfeil zeigt Richtung)',
+    info_race_sprint:'🏁 Ziel ist markiert (grüner Pfeil zeigt Richtung). Sprint mit <kbd>Shift</kbd>!',
+    items_left:'📦 {n} Items übrig', dist_to_goal:'📏 {n}px zum Ziel', goal_reached:'✅ Ziel erreicht!', goal_reached_big:'ZIEL ERREICHT!',
+    arena_label:'🏷️ FANGEN ARENA', start_label:'START', goal_label:'ZIEL',
+    q_of:'Frage {i}/{n}', ab_hint:'🅰️ {a}   |   🅱️ {b}',
+    // End screen
+    end_time_up:'Zeit um!', end_race_done:'Rennen beendet!', end_all_questions:'Alle Fragen beantwortet!',
+    end_stopped:'Abgebrochen', end_stopped_full:'Spiel abgebrochen', end_over:'Spiel beendet!',
+    end_your_score:'Dein Score: {n}', end_caught_x:'Du hast {n} Spieler gefangen!',
+    end_race_ok:'Gut gemacht!', end_race_ok_finish:'Im Ziel angekommen.',
+    end_race_not:'Nicht geschafft', end_race_not_detail:'Du hast das Ziel nicht erreicht.',
+    end_race_timeup:'Versuch es nochmal — du warst so nah dran!',
+    end_ab_detail:'Alle Ergebnisse:', end_ab_last:'Letzte Frage!',
+    end_early_detail:'Spiel vorzeitig beendet.', end_ab_progress:'{cur} von {total} Fragen beantwortet.',
+    end_q_label:'Frage {n}:', end_no_answer:'Keine Antwort: {names}',
+    sb_empty:'Noch keine Punkte',
+    // System chat messages (matched via `code`)
+    'sys.joined':'{name} hat die Welt betreten!', 'sys.left':'{name} hat die Welt verlassen.',
+    'sys.tagged':'{tagger} hat {target} gefangen!',
+    'sys.all_tagged':'🎯 Alle gefangen! Spiel beendet.',
+    'sys.tagger_left_ended':'Tagger hat verlassen — Spiel beendet.',
+    'sys.tagger_left_new':'Tagger hat verlassen — {name} ist jetzt der Fänger!',
+    'sys.race_finished':'🏁 {name} hat das Ziel in {secs}s erreicht!',
+    'sys.game_stopped_by':'Spiel von {name} beendet.',
+    'sys.ab_all_answered':'🅰️🅱️ Alle Fragen beantwortet!',
+    'sys.game_started':'🎮 {type} gestartet!',
+    'sys.agents_on':'Agents aktiviert.', 'sys.agents_off':'Agents deaktiviert.',
+    'sys.rate_limit':'⚠️ Bitte nicht spammen (max 5 Nachrichten / 3 Sek).',
+    'sys.game_running':'⚠️ Es läuft bereits ein Spiel. Bitte warte bis es beendet ist.',
+    'sys.server_full':'⚠️ Server voll (max 50)!', 'sys.conn_lost':'⚠️ Verbindung verloren.',
+    'sys.no_socket':'⚠️ Socket.io nicht geladen — nur Single-Player!',
+    'sys.local_tag':'{player} hat {target} gefangen!',
+    'sys.local_race':'🏁 {name} hat das Rennen in {secs}s geschafft!',
+    'sys.ab_question':'❓ {q} — 🅰️ {a} | 🅱️ {b}',
+    'sys.ab_result':'📊 Frage {i}: 🅰️ {a} · 🅱️ {b}',
+    'sys.ab_chosen':'Du hast {fld} ({opt}) gewählt!',
+    'sys.ab_chosen_none':'Du hast kein Feld gewählt!',
+    'sys.race_local_started':'🏁 Wettrennen gestartet — Ziel ist {px}px entfernt!',
+    'sys.tag_local_started':'🏷️ Fangen gestartet!',
+    'sys.all_agents_on':'Alle Agents aktiviert.', 'sys.all_agents_off':'Alle Agents deaktiviert — nur Team-Modus!',
+    'sys.cfg_copied':'Config kopiert!',
+    'sys.cfg_invalid':'Ungültig!',
+    // Server-full modal
+    server_full_title:'Server voll', server_full_detail:'Der Server hat die Kapazität erreicht (max 50 Spieler). Versuch es später nochmal.',
+    field_A:'Feld A', field_B:'Feld B',
+  },
+  en: {
+    title:'Virtual World', tagline:'Walk around, chat & play minigames with your team',
+    name_placeholder:'Your name...', chat_placeholder:'Message...', join:'Join', send:'Send',
+    close:'Close', online:'Online', scoreboard:'Scoreboard',
+    you_suffix:' (You)',
+    btn_config:'🤖 Configure agents', btn_agents_on:'👁 Agents On', btn_agents_off:'🚫 Agents Off',
+    btn_minigames:'🎮 Minigames', btn_stop_game:'✕ Stop game', btn_continue:'Keep playing',
+    ctl_walk:'Walk', ctl_sprint:'Sprint', ctl_chat:'Chat', ctl_config:'Config', ctl_mg:'Minigames', ctl_agents:'Agents On/Off', ctl_stop:'Stop game',
+    agents_cfg_title:'🤖 Agent configuration',
+    cfg_toggle_all:'All On/Off', cfg_reset:'Reset', cfg_export:'Export', cfg_import:'Import',
+    presets:'Presets:', preset_party:'🎉 Party', preset_zen:'🧘 Zen', preset_chaos:'🌪️ Chaos', preset_minimal:'📦 Minimal', preset_army:'🎖️ Army',
+    cfg_new_agent:'+ New agent',
+    cfg_name:'Name', cfg_color:'Color', cfg_personality:'Personality', cfg_speed:'Speed', cfg_chatfreq:'Chat freq', cfg_wander:'Wander radius', cfg_custom:'Custom msgs',
+    status_on:'On', status_off:'Off',
+    mg_title:'🎮 Minigames',
+    mg_tag_title:'🏷️ Tag', mg_tag_desc:'One player is "it" and must catch the others! Fenced arena, sprint allowed.',
+    mg_col_title:'⭐ Collect', mg_col_desc:'Collect as many items as possible! They spawn randomly across the map.',
+    mg_ab_title:'🅰️🅱️ A or B', mg_ab_desc:'A question appears — run to field A or field B! Define your questions first.',
+    mg_race_title:'🏁 Race', mg_race_desc:'Run from start to finish! Who is fastest?',
+    mg_tag_setup:'🏷️ Tag — Setup', mg_col_setup:'⭐ Collect — Setup', mg_ab_setup:'🅰️🅱️ A or B — Setup', mg_race_setup:'🏁 Race — Setup',
+    mg_duration:'Duration (seconds)', mg_arena:'Arena size',
+    size_small:'Small (400x300)', size_medium:'Medium (600x450)', size_large:'Large (900x600)',
+    mg_tag_hint:'You\'re "it" — catch as many as you can! Sprint with Shift.',
+    mg_tag_start:'🏷️ Start tag!',
+    mg_col_hint:'Walk over items to collect them! ⭐=1, 💰=2, 💎=3, 🏆=5 points',
+    mg_col_start:'⭐ Start collecting!',
+    mg_ab_questions:'Questions (one per line, format: Question | Answer A | Answer B)',
+    mg_ab_default:'Books or movies? | Books | Movies\nMountains or sea? | Mountains | Sea\nEarly bird or night owl? | Early bird | Night owl\nPizza or pasta? | Pizza | Pasta\nHome office or office? | Home office | Office',
+    mg_ab_time:'Time per question (seconds)', mg_ab_start:'🅰️🅱️ Start!',
+    mg_ab_alert_empty:'Please enter at least one question!',
+    mg_race_limit:'Time limit (seconds)', mg_race_dist:'Distance',
+    dist_short:'Short (~400px)', dist_medium:'Medium (~800px)', dist_long:'Long (~1400px)',
+    mg_race_hint:'Run from start to finish! Sprint with Shift.', mg_race_start:'🏁 Start race!',
+    gt_tag:'🏷️ TAG', gt_col:'⭐ COLLECT', gt_race:'🏁 RACE', gt_ab:'🅰️🅱️ A OR B',
+    score_col:'⭐ {n} points', score_tag:'Caught: {n}', score_race_goto:'Run to the goal!',
+    tag_caught_msg:'Caught: {n}', caught_bubble:'Oh no! 😱',
+    info_col_legend:'<span class="legend-item">⭐ 1P</span><span class="legend-item">🍎 1P</span><span class="legend-item">💰 2P</span><span class="legend-item">💎 3P</span><span class="legend-item">🏆 5P</span> — walk over to collect',
+    info_col_legend_short:'<span class="legend-item">⭐ 1P</span><span class="legend-item">🍎 1P</span><span class="legend-item">💰 2P</span><span class="legend-item">💎 3P</span><span class="legend-item">🏆 5P</span> — walk over them',
+    info_race:'🏁 Goal is marked (green arrow shows direction)',
+    info_race_sprint:'🏁 Goal is marked (green arrow shows direction). Sprint with <kbd>Shift</kbd>!',
+    items_left:'📦 {n} items left', dist_to_goal:'📏 {n}px to goal', goal_reached:'✅ Goal reached!', goal_reached_big:'GOAL REACHED!',
+    arena_label:'🏷️ TAG ARENA', start_label:'START', goal_label:'GOAL',
+    q_of:'Question {i}/{n}', ab_hint:'🅰️ {a}   |   🅱️ {b}',
+    end_time_up:'Time\'s up!', end_race_done:'Race finished!', end_all_questions:'All questions answered!',
+    end_stopped:'Stopped', end_stopped_full:'Game stopped', end_over:'Game over!',
+    end_your_score:'Your score: {n}', end_caught_x:'You caught {n} players!',
+    end_race_ok:'Well done!', end_race_ok_finish:'You reached the goal.',
+    end_race_not:'Didn\'t make it', end_race_not_detail:'You didn\'t reach the goal.',
+    end_race_timeup:'Try again — you were so close!',
+    end_ab_detail:'All results:', end_ab_last:'Last question!',
+    end_early_detail:'Game ended early.', end_ab_progress:'{cur} of {total} questions answered.',
+    end_q_label:'Question {n}:', end_no_answer:'No answer: {names}',
+    sb_empty:'No points yet',
+    'sys.joined':'{name} entered the world!', 'sys.left':'{name} left the world.',
+    'sys.tagged':'{tagger} caught {target}!',
+    'sys.all_tagged':'🎯 All caught! Game over.',
+    'sys.tagger_left_ended':'Tagger left — game ended.',
+    'sys.tagger_left_new':'Tagger left — {name} is now "it"!',
+    'sys.race_finished':'🏁 {name} reached the goal in {secs}s!',
+    'sys.game_stopped_by':'Game ended by {name}.',
+    'sys.ab_all_answered':'🅰️🅱️ All questions answered!',
+    'sys.game_started':'🎮 {type} started!',
+    'sys.agents_on':'Agents enabled.', 'sys.agents_off':'Agents disabled.',
+    'sys.rate_limit':'⚠️ Please don\'t spam (max 5 messages / 3 sec).',
+    'sys.game_running':'⚠️ A game is already running. Please wait until it\'s over.',
+    'sys.server_full':'⚠️ Server full (max 50)!', 'sys.conn_lost':'⚠️ Connection lost.',
+    'sys.no_socket':'⚠️ Socket.io not loaded — single-player only!',
+    'sys.local_tag':'{player} caught {target}!',
+    'sys.local_race':'🏁 {name} finished the race in {secs}s!',
+    'sys.ab_question':'❓ {q} — 🅰️ {a} | 🅱️ {b}',
+    'sys.ab_result':'📊 Question {i}: 🅰️ {a} · 🅱️ {b}',
+    'sys.ab_chosen':'You chose {fld} ({opt})!',
+    'sys.ab_chosen_none':'You didn\'t choose a field!',
+    'sys.race_local_started':'🏁 Race started — goal is {px}px away!',
+    'sys.tag_local_started':'🏷️ Tag started!',
+    'sys.all_agents_on':'All agents enabled.', 'sys.all_agents_off':'All agents disabled — team mode only!',
+    'sys.cfg_copied':'Config copied!',
+    'sys.cfg_invalid':'Invalid!',
+    server_full_title:'Server full', server_full_detail:'The server has reached capacity (max 50 players). Try again later.',
+    field_A:'Field A', field_B:'Field B',
+  }
+};
+function t(key, params){
+  let s = (I18N[LANG] && I18N[LANG][key]) || (I18N.de[key]) || key;
+  if (params) s = s.replace(/\{(\w+)\}/g, (_,k)=> (params[k]==null?'':String(params[k])));
+  return s;
+}
+function pLabel(k){
+  const p = PERSONALITIES[k]; if (!p) return k;
+  return LANG==='en' ? (p.labelEn||p.labelDe) : (p.labelDe||p.labelEn);
+}
+function applyI18n(){
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n');
+    const v = t(k);
+    // Allow HTML for keys known to contain kbd markup
+    if (k==='ctl_stop'||k==='ctl_walk'||k==='ctl_chat'||k==='ctl_sprint'||k==='ctl_config'||k==='ctl_mg'||k==='ctl_agents') {
+      el.textContent = v;
+    } else {
+      el.textContent = v;
+    }
+  });
+  const ni = document.getElementById('name-input'); if (ni) ni.placeholder = t('name_placeholder');
+  const ci = document.getElementById('chat-input'); if (ci) ci.placeholder = t('chat_placeholder');
+  document.querySelectorAll('#login-lang-switch .lang-btn, #lang-top .lang-btn').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-lang')===LANG);
+  });
+  // Quick-toggle button shows current agents state
+  const qb = document.getElementById('agents-quick-toggle');
+  if (qb) qb.textContent = t(agentsEnabled?'btn_agents_on':'btn_agents_off');
+  // Config panel needs re-render to update inline labels
+  if (configOpen) renderConfigPanel();
+  // Re-render open minigame setup (labels inside)
+  const mgArea = document.getElementById('mg-setup-area');
+  if (mgArea && mgArea.style.display!=='none' && mgArea.getAttribute('data-type')) {
+    showMgSetup(mgArea.getAttribute('data-type'));
+  }
+}
+function setLang(l){
+  if (l!=='de' && l!=='en') return;
+  if (LANG===l) return;
+  LANG = l;
+  try { localStorage.setItem('worldLang', LANG); } catch(e){}
+  applyI18n();
+}
+// Wire language buttons (delegated so both login + in-game bars work)
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.lang-btn'); if (!b) return;
+  const l = b.getAttribute('data-lang'); if (l) setLang(l);
+});
 const DEFAULT_AGENTS=[
   {name:'Agent Alpha',color:'#8b5cf6',personality:'freundlich',speed:1.5,chatFreq:12,wanderRadius:400,active:true},
   {name:'Agent Beta',color:'#7c3aed',personality:'witzig',speed:1.2,chatFreq:15,wanderRadius:300,active:true},
@@ -453,37 +710,46 @@ const colorPicker=document.getElementById('color-picker');
 COLORS.forEach((c,i)=>{const el=document.createElement('div');el.className='color-opt'+(c===selectedColor?' selected':'');el.style.background=c;el.onclick=()=>{document.querySelectorAll('.color-opt').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');selectedColor=c;};colorPicker.appendChild(el);});
 document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')joinWorld();});
 let _joining=false;
-function joinWorld(){if(_joining)return;_joining=true;const name=document.getElementById('name-input').value.trim()||'Spieler';document.getElementById('login-screen').classList.add('hidden');setTimeout(()=>{document.getElementById('login-screen').style.display='none';document.getElementById('game-container').style.display='block';startGame(name,selectedColor);connectSocket(name,selectedColor);},500);}
+function joinWorld(){if(_joining)return;_joining=true;const name=document.getElementById('name-input').value.trim()||(LANG==='en'?'Player':'Spieler');document.getElementById('login-screen').classList.add('hidden');setTimeout(()=>{document.getElementById('login-screen').style.display='none';document.getElementById('game-container').style.display='block';startGame(name,selectedColor);connectSocket(name,selectedColor);},500);}
+// Initialer i18n-Pass für die Login-Screen (vor Spielstart).
+applyI18n();
 
 // ===================== MULTIPLAYER (Socket.io) =====================
 let socket=null, myId=null, lastMoveSent=0;
 function connectSocket(name,color){
-  if(typeof io==='undefined'){addChatMsg('System','','⚠️ Socket.io nicht geladen — nur Single-Player!',true);return;}
+  if(typeof io==='undefined'){addChatMsg('System','',t('sys.no_socket'),true);return;}
   socket=io();
   socket.on('connect',()=>{myId=socket.id;socket.emit('join',{name,color});});
   socket.on('server-full',()=>{
-    addChatMsg('System','','⚠️ Server voll (max 50)!',true);
+    addChatMsg('System','',t('sys.server_full'),true);
     // Blockierendes Popup, weil der User sonst nichts mitbekommt (Chat ist beim
     // Verbindungsaufbau oft noch nicht sichtbar).
-    endGame('Server voll','🚫','Der Server hat die Kapazität erreicht (max 50 Spieler). Versuch es später nochmal.');
+    endGame(t('server_full_title'),'🚫',t('server_full_detail'));
   });
   socket.on('init',(d)=>{
     // Remote-Spieler aus Server-State erzeugen
     d.players.forEach(p=>{if(p.id!==myId)addRemotePlayer(p);});
     // Agents übernehmen vom Server (falls abweichend von Client-Default)
     if(d.agentConfigs){agentConfigs=d.agentConfigs;agentsEnabled=d.agentsEnabled;spawnAgentsFromConfig();
-      const b=document.getElementById('agents-quick-toggle');if(b){b.textContent=agentsEnabled?'👁 Agents An':'🚫 Agents Aus';b.classList.toggle('agents-off',!agentsEnabled);}}
+      const b=document.getElementById('agents-quick-toggle');if(b){b.textContent=t(agentsEnabled?'btn_agents_on':'btn_agents_off');b.classList.toggle('agents-off',!agentsEnabled);}}
     // Aktives Spiel sync
     if(d.activeGame){activeGame=d.activeGame;gameItems=d.gameItems||[];abZones=d.abZones;raceGoal=d.raceGoal;document.getElementById('game-hud').classList.add('show');}
   });
-  socket.on('player-joined',p=>{addRemotePlayer(p);addChatMsg('System','',`${p.name} ist beigetreten!`,true);});
+  socket.on('player-joined',p=>{addRemotePlayer(p);addChatMsg('System','',t('sys.joined',{name:p.name}),true);});
   socket.on('player-left',id=>{entities=entities.filter(e=>e.remoteId!==id);});
   socket.on('player-moved',d=>{const e=entities.find(e2=>e2.remoteId===d.id);if(e){e.x=d.x;e.y=d.y;e.dir=d.dir;e.frame=d.frame;e.moving=d.moving;}});
-  socket.on('chat',m=>{addChatMsg(m.name,m.color,m.text,!!m.system,!!m.agent);
-    if(!m.system){const e=entities.find(e2=>e2.name===m.name&&!e2.isAgent);if(e){e.speechText=m.text;e.speechTimer=4000;}}});
+  socket.on('chat',m=>{
+    // Server sendet bei System-Messages `code`+`params` für i18n; bei Agent-Messages
+    // `texts:{de,en}` mit beiden Sprachen. Fallback ist `text` (DE).
+    let txt = m.text;
+    if (m.code && I18N[LANG] && I18N[LANG][m.code]) txt = t(m.code, m.params);
+    else if (m.texts && m.texts[LANG]) txt = m.texts[LANG];
+    addChatMsg(m.name,m.color,txt,!!m.system,!!m.agent);
+    if(!m.system){const e=entities.find(e2=>e2.name===m.name&&!e2.isAgent);if(e){e.speechText=txt;e.speechTimer=4000;}}
+  });
   socket.on('agents-update',arr=>{arr.forEach(a=>{const e=entities.find(e2=>e2.isAgent&&e2.agentId===a.id);if(e){e.x=a.x;e.y=a.y;e.dir=a.dir;e.frame=a.frame;e.moving=a.moving;}});});
   // Agent-Sprechblasen (über dem Agent-Sprite). Kommt als separates Event vom Server.
-  socket.on('agent-speech',d=>{const e=entities.find(e2=>e2.isAgent&&e2.agentId===d.id);if(e){e.speechText=d.text;e.speechTimer=4000;}});
+  socket.on('agent-speech',d=>{const e=entities.find(e2=>e2.isAgent&&e2.agentId===d.id);if(e){const txt=(d.texts&&d.texts[LANG])?d.texts[LANG]:d.text;e.speechText=txt;e.speechTimer=4000;}});
   // Spieler-Sprechblasen: identifiziert per socketId, robust gegen Namens-Duplikate.
   socket.on('speech',d=>{
     if(d.id===myId&&player){player.speechText=d.text;player.speechTimer=4000;return;}
@@ -491,8 +757,8 @@ function connectSocket(name,color){
     if(e){e.speechText=d.text;e.speechTimer=4000;}
   });
   socket.on('agents-state',d=>{agentsEnabled=d.enabled;if(d.configs)agentConfigs=d.configs;spawnAgentsFromConfig();
-    const b=document.getElementById('agents-quick-toggle');if(b){b.textContent=agentsEnabled?'👁 Agents An':'🚫 Agents Aus';b.classList.toggle('agents-off',!agentsEnabled);}});
-  socket.on('disconnect',()=>addChatMsg('System','','⚠️ Verbindung verloren.',true));
+    const b=document.getElementById('agents-quick-toggle');if(b){b.textContent=t(agentsEnabled?'btn_agents_on':'btn_agents_off');b.classList.toggle('agents-off',!agentsEnabled);}});
+  socket.on('disconnect',()=>addChatMsg('System','',t('sys.conn_lost'),true));
   // Game events
   socket.on('game-started',d=>{
     const g=d.game;
@@ -506,50 +772,50 @@ function connectSocket(name,color){
       activeGame={type:g.type,duration:g.duration,elapsed:0,startTime:g.startTime,score:0,simScores:{},arena:g.arena,questions:g.questions,timePerQ:g.timePerQ,currentQ:0,questionTimer:0,finished:false,finishTime:0,tagger:g.tagger};
       gameItems=d.gameItems||[];abZones=d.abZones;raceGoal=d.raceGoal;
       const hud=document.getElementById('game-hud');hud.classList.add('show');
-      const titles={tag:'🏷️ FANGEN',collect:'⭐ SAMMELN',race:'🏁 WETTRENNEN',ab:'🅰️🅱️ A ODER B'};
-      document.getElementById('game-title').textContent=titles[g.type]||g.type.toUpperCase();
-      document.getElementById('game-score').textContent=g.type==='collect'?'⭐ 0 Punkte':g.type==='tag'?'Gefangen: 0':g.type==='race'?'Lauf zum Ziel!':'';
+      const titleKey={tag:'gt_tag',collect:'gt_col',race:'gt_race',ab:'gt_ab'}[g.type];
+      document.getElementById('game-title').textContent=titleKey?t(titleKey):(g.type||'').toUpperCase();
+      document.getElementById('game-score').textContent=g.type==='collect'?t('score_col',{n:0}):g.type==='tag'?t('score_tag',{n:0}):g.type==='race'?t('score_race_goto'):'';
       if(g.type==='collect'){
-        document.getElementById('game-info').innerHTML='<span class="legend-item">⭐ 1P</span><span class="legend-item">🍎 1P</span><span class="legend-item">💰 2P</span><span class="legend-item">💎 3P</span><span class="legend-item">🏆 5P</span> — laufe drüber zum Einsammeln';
+        document.getElementById('game-info').innerHTML=t('info_col_legend');
         document.getElementById('game-scoreboard').classList.add('show');
-        document.getElementById('sb-title').textContent='⭐ Punktestand';
+        document.getElementById('sb-title').textContent='⭐ '+t('scoreboard');
       }
       if(g.type==='race'){
         activeGame.startPos={x:player.x,y:player.y};
-        document.getElementById('game-info').innerHTML='🏁 Ziel ist markiert (grüner Pfeil zeigt Richtung)';
+        document.getElementById('game-info').innerHTML=t('info_race');
         document.getElementById('race-arrow').classList.add('show');
       }
     },600);}},1000);
   });
   socket.on('game-ended',d=>{
     const type=activeGame?.type||d?.game?.type;
-    const title=d?.stopped?'Spiel abgebrochen':'Spiel beendet!';
-    let result='🎮',detail='Spiel beendet.',lb=null,autoClose=0,ab=null;
+    const title=d?.stopped?t('end_stopped_full'):t('end_over');
+    let result='🎮',detail=t('end_over'),lb=null,autoClose=0,ab=null;
     if(type==='collect'){
       const myScore=d.scores?.[myId]||0;
       result='⭐ '+myScore;
-      detail='Dein Score: '+myScore;
+      detail=t('end_your_score',{n:myScore});
       lb=buildLeaderboardRows(d);
       autoClose=10000; // 10 Sek Auto-Close fürs Leaderboard
     } else if(type==='tag'){
       const myScore=d.scores?.[myId]??(activeGame?.score||0);
-      result='Gefangen: '+myScore;
-      detail='Zeit vorbei!';
+      result=t('score_tag',{n:myScore});
+      detail=t('end_time_up');
       lb=buildLeaderboardRows(d);
       autoClose=10000;
     }
     else if(type==='race'){
       // Eigenes Zeit-/Status in result, Leaderboard darunter
       const mine=Array.isArray(d?.leaderboard)?d.leaderboard.find(r=>r.id===myId):null;
-      if(activeGame?.finished){result='🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s';detail='Gut gemacht!';}
-      else if(mine?.finished){result='🏁 '+mine.score;detail='Im Ziel angekommen.';}
-      else {result='Nicht geschafft';detail='Du hast das Ziel nicht erreicht.';}
+      if(activeGame?.finished){result='🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s';detail=t('end_race_ok');}
+      else if(mine?.finished){result='🏁 '+mine.score;detail=t('end_race_ok_finish');}
+      else {result=t('end_race_not');detail=t('end_race_not_detail');}
       lb=buildLeaderboardRows(d);
       autoClose=10000;
     }
     else if(type==='ab'){
       result='🅰️🅱️';
-      detail='Alle Ergebnisse:';
+      detail=t('end_ab_detail');
       ab=Array.isArray(d?.abResults)?d.abResults:null;
       autoClose=10000;
     }
@@ -585,7 +851,7 @@ function connectSocket(name,color){
     if(e){
       e.tagged=true;
       spawnCollectParticles(e.x+8,e.y+8,'#ef4444');
-      e.speechText='Oh nein! 😱';e.speechTimer=2000;
+      e.speechText=t('caught_bubble');e.speechTimer=2000;
       // Shake more if we are the victim
       if(player&&d.targetId===myId)triggerShake(3.5,300);
       else triggerShake(1.2,160);
@@ -593,17 +859,17 @@ function connectSocket(name,color){
     // Wenn ich der Tagger bin, eigenen Score-HUD aktualisieren
     if(d.taggerId===myId&&activeGame&&activeGame.type==='tag'){
       activeGame.score=(activeGame.score||0)+1;
-      document.getElementById('game-score').textContent='Gefangen: '+activeGame.score;
+      document.getElementById('game-score').textContent=t('score_tag',{n:activeGame.score});
     }
   });
   // A/B Events
   socket.on('ab-question',d=>{if(!activeGame||activeGame.type!=='ab')return;activeGame.currentQ=d.idx;activeGame.questions[d.idx]=d.question;activeGame.questionTimer=activeGame.timePerQ;
-    document.getElementById('game-title').textContent=`Frage ${d.idx+1}/${activeGame.questions.length}`;
+    document.getElementById('game-title').textContent=t('q_of',{i:d.idx+1,n:activeGame.questions.length});
     document.getElementById('game-score').textContent=d.question.q;
-    showGameMsg(`🅰️ ${d.question.a}   |   🅱️ ${d.question.b}`);
-    addChatMsg('System','',`❓ ${d.question.q} — 🅰️ ${d.question.a} | 🅱️ ${d.question.b}`,true);
+    showGameMsg(t('ab_hint',{a:d.question.a,b:d.question.b}));
+    addChatMsg('System','',t('sys.ab_question',{q:d.question.q,a:d.question.a,b:d.question.b}),true);
   });
-  socket.on('ab-result',d=>addChatMsg('System','',`📊 Frage ${d.idx+1}: 🅰️ ${d.countA} · 🅱️ ${d.countB}`,true));
+  socket.on('ab-result',d=>addChatMsg('System','',t('sys.ab_result',{i:d.idx+1,a:d.countA,b:d.countB}),true));
 }
 function addRemotePlayer(p){
   const e=createEntity(p.name,p.color,p.x,p.y,false,false);
@@ -622,7 +888,9 @@ function startGame(name,color){
   resizeCanvas();window.addEventListener('resize',resizeCanvas);generateWorldObjects();
   player=createEntity(name,color,WORLD_W/2,WORLD_H/2,false,false);entities.push(player);
   spawnAgentsFromConfig();
-  addChatMsg('System','',`${player.name} hat die Welt betreten!`,true);
+  addChatMsg('System','',t('sys.joined',{name:player.name}),true);
+  // Dynamische Texte, die beim Start noch nicht gesetzt wurden, jetzt anwenden.
+  applyI18n();
   requestAnimationFrame(gameLoop);
 }
 function resizeCanvas(){if(!canvas)return;canvas.width=window.innerWidth;canvas.height=window.innerHeight;ctx.imageSmoothingEnabled=false;}
@@ -722,7 +990,10 @@ function updateAgent(agent,dt){
   if(dist>5){const s=speed*dt;agent.x+=(dx/dist)*s;agent.y+=(dy/dist)*s;if(Math.abs(dx)>Math.abs(dy))agent.dir=dx<0?1:2;else agent.dir=dy<0?3:0;agent.moving=true;}
   else agent.moving=false;
   if(!agent.chatTimer||Date.now()>agent.chatTimer){
-    const pers=PERSONALITIES[cfg.personality]||PERSONALITIES.freundlich;let msgs=[...pers.msgs];if(cfg.customMsgs?.length)msgs.push(...cfg.customMsgs);
+    const pers=PERSONALITIES[cfg.personality]||PERSONALITIES.freundlich;
+    // Persönlichkeits-Msgs sind {de,en}-Paare; Custom-Msgs sind Strings.
+    let msgs=pers.msgs.map(m=>(LANG==='en'?(m.en||m.de):(m.de||m.en)));
+    if(cfg.customMsgs?.length) msgs.push(...cfg.customMsgs);
     const msg=msgs[Math.floor(Math.random()*msgs.length)];agent.speechText=msg;agent.speechTimer=4000;addChatMsg(agent.name,agent.color,msg,false,true);
     agent.chatTimer=Date.now()+chatFreq+Math.random()*chatFreq*.5;
   }
@@ -753,7 +1024,11 @@ function updateSimPlayer(sp,dt){
   if(dist>5){const s=spd*dt;sp.x+=(dx/dist)*s;sp.y+=(dy/dist)*s;if(Math.abs(dx)>Math.abs(dy))sp.dir=dx<0?1:2;else sp.dir=dy<0?3:0;sp.moving=true;}
   else sp.moving=false;
   if(!sp.chatTimer||Date.now()>sp.chatTimer){
-    const msgs=activeGame?["Los los!","Ich bin schneller!","Haha! 😄","Warte auf mich!","Yeees!","Ooh knapp!"]:["Coole Welt! 🌍","Hey!","Was geht?","lol","Die Agents sind witzig 😄"];
+    const deGame=["Los los!","Ich bin schneller!","Haha! 😄","Warte auf mich!","Yeees!","Ooh knapp!"];
+    const enGame=["Go go!","I'm faster!","Haha! 😄","Wait for me!","Yeees!","Ooh close!"];
+    const deIdle=["Coole Welt! 🌍","Hey!","Was geht?","lol","Die Agents sind witzig 😄"];
+    const enIdle=["Cool world! 🌍","Hey!","What's up?","lol","The agents are funny 😄"];
+    const msgs=activeGame?(LANG==='en'?enGame:deGame):(LANG==='en'?enIdle:deIdle);
     const msg=msgs[Math.floor(Math.random()*msgs.length)];sp.speechText=msg;sp.speechTimer=3000;addChatMsg(sp.name,sp.color,msg);
     sp.chatTimer=Date.now()+(activeGame?6000:12000)+Math.random()*10000;
   }
@@ -784,11 +1059,11 @@ function updateMinigame(dt){
         } else {
           // Single-Player: lokal anwenden
           e.tagged=true;activeGame.score=(activeGame.score||0)+1;
-          document.getElementById('game-score').textContent='Gefangen: '+activeGame.score;
-          e.speechText='Oh nein! 😱';e.speechTimer=2000;
+          document.getElementById('game-score').textContent=t('score_tag',{n:activeGame.score});
+          e.speechText=t('caught_bubble');e.speechTimer=2000;
           triggerShake(2.4,220);
           spawnCollectParticles(e.x+8,e.y+8,'#ef4444');
-          addChatMsg('System','',`${player.name} hat ${e.name} gefangen!`,true);
+          addChatMsg('System','',t('sys.local_tag',{player:player.name,target:e.name}),true);
         }
       }
     });
@@ -800,7 +1075,7 @@ function updateMinigame(dt){
       if(it.collected)return true;
       if(distance({x:it.x,y:it.y},player)<14){
         activeGame.score=(activeGame.score||0)+it.points;
-        document.getElementById('game-score').textContent='⭐ '+activeGame.score+' Punkte';
+        document.getElementById('game-score').textContent=t('score_col',{n:activeGame.score});
         changed=true;
         spawnCollectParticles(it.x,it.y,'#fde047');
         if(socket&&socket.connected){socket.emit('collect-item',idx);it.collected=true;return true;}
@@ -817,7 +1092,7 @@ function updateMinigame(dt){
       return !simGrabbed;
     });
     if(changed||!activeGame._sbInit){updateCollectScoreboard();activeGame._sbInit=true;}
-    document.getElementById('game-dist').textContent='📦 '+gameItems.length+' Items übrig';
+    document.getElementById('game-dist').textContent=t('items_left',{n:gameItems.length});
     // Spawn new items
     if(gameItems.length<8&&Math.random()<.03*dt){
       const types=[{emoji:'⭐',points:1},{emoji:'💎',points:3},{emoji:'🍎',points:1},{emoji:'🏆',points:5},{emoji:'💰',points:2}];
@@ -830,7 +1105,7 @@ function updateMinigame(dt){
       const gx=raceGoal.x+raceGoal.w/2, gy=raceGoal.y+raceGoal.h/2;
       const dist=distance(player,{x:gx,y:gy});
       // Distanz-Anzeige
-      if(!activeGame.finished)document.getElementById('game-dist').textContent='📏 '+Math.round(dist)+'px zum Ziel';
+      if(!activeGame.finished)document.getElementById('game-dist').textContent=t('dist_to_goal',{n:Math.round(dist)});
       // Richtungspfeil am Bildschirmrand wenn Ziel außerhalb
       const arrow=document.getElementById('race-arrow');
       const screenX=(gx-camX)*SCALE, screenY=(gy-camY)*SCALE;
@@ -853,11 +1128,11 @@ function updateMinigame(dt){
         activeGame.finished=true;activeGame.finishTime=activeGame.elapsed;
         const secs=(activeGame.finishTime/1000).toFixed(1);
         document.getElementById('game-score').textContent='🏁 '+secs+'s!';
-        document.getElementById('game-dist').textContent='✅ Ziel erreicht!';
-        showGameMsg('ZIEL ERREICHT!');
+        document.getElementById('game-dist').textContent=t('goal_reached');
+        showGameMsg(t('goal_reached_big'));
         arrow.style.display='none';
         if(socket&&socket.connected)socket.emit('race-finish');
-        else addChatMsg('System','',`🏁 ${player.name} hat das Rennen in ${secs}s geschafft!`,true);
+        else addChatMsg('System','',t('sys.local_race',{name:player.name,secs}),true);
       }
     }
   }
@@ -878,10 +1153,11 @@ function updateMinigame(dt){
           if(qa&&abZones){
             const onA=isInZone(player,abZones.a)?'A':'';const onB=isInZone(player,abZones.b)?'B':'';
             const choice=onA||onB||'?';
-            addChatMsg('System','',`Du hast ${choice==='?'?'kein Feld':'Feld '+choice} (${choice==='A'?qa.a:choice==='B'?qa.b:'---'}) gewählt!`,true);
+            if(choice==='?') addChatMsg('System','',t('sys.ab_chosen_none'),true);
+            else addChatMsg('System','',t('sys.ab_chosen',{fld:t('field_'+choice),opt:choice==='A'?qa.a:qa.b}),true);
             activeGame.currentQ++;
             if(activeGame.currentQ<activeGame.questions.length){setTimeout(()=>showNextABQuestion(),1500);}
-            else {setTimeout(()=>endGame('Alle Fragen beantwortet!','🅰️🅱️','Letzte Frage!'),2000);return;}
+            else {setTimeout(()=>endGame(t('end_all_questions'),'🅰️🅱️',t('end_ab_last')),2000);return;}
           }
         }
       }
@@ -891,20 +1167,20 @@ function updateMinigame(dt){
 
   // Time up — lokales Auto-End nur bei Single-Player (im MP-Modus endet Server für alle)
   if(remaining<=0&&activeGame.type!=='ab'&&!(socket&&socket.connected)){
-    if(activeGame.type==='tag')endGame('Zeit um!','Gefangen: '+activeGame.score,`Du hast ${activeGame.score} Spieler gefangen!`);
+    if(activeGame.type==='tag')endGame(t('end_time_up'),t('score_tag',{n:activeGame.score}),t('end_caught_x',{n:activeGame.score}));
     else if(activeGame.type==='collect'){
       // Leaderboard für Single-Player (Spieler + ggf. Sim-NPCs)
-      const rows=[{id:'me',name:player?.name||'Du',color:player?.color||'#3b82f6',score:activeGame.score||0,you:true}];
+      const rows=[{id:'me',name:player?.name||(LANG==='en'?'You':'Du'),color:player?.color||'#3b82f6',score:activeGame.score||0,you:true}];
       if(activeGame.simScores)Object.entries(activeGame.simScores).forEach(([n,s])=>{
         const e=entities.find(x=>x.name===n);
         rows.push({id:n,name:n,color:e?e.color:'#888',score:s,you:false});
       });
       rows.sort((a,b)=>b.score-a.score);
-      endGame('Zeit um!','⭐ '+activeGame.score,`Dein Score: ${activeGame.score}`,rows,10000);
+      endGame(t('end_time_up'),'⭐ '+activeGame.score,t('end_your_score',{n:activeGame.score}),rows,10000);
     }
     else if(activeGame.type==='race'){
-      if(!activeGame.finished)endGame('Zeit um!','Nicht geschafft!','Versuch es nochmal — du warst so nah dran!');
-      else endGame('Rennen beendet!','🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s','Gut gemacht!');
+      if(!activeGame.finished)endGame(t('end_time_up'),t('end_race_not'),t('end_race_timeup'));
+      else endGame(t('end_race_done'),'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s',t('end_race_ok'));
     }
   }
 }
@@ -918,8 +1194,9 @@ function updateCollectScoreboard(){
   // Remote players: wir kennen ihre Scores nicht lokal (Server tracked) — zeigen 0 oder aus activeGame.scores falls vom Server
   entities.filter(e=>e.isRemotePlayer).forEach(e=>{const s=(activeGame.scores&&activeGame.scores[e.remoteId])||0;rows.push({name:e.name,color:e.color,score:s,you:false});});
   rows.sort((a,b)=>b.score-a.score);
-  const html=rows.map((r,i)=>{const medal=i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':'';return `<div class="sb-row${r.you?' you':''}"><span class="sb-name"><span class="sb-dot" style="background:${r.color}"></span>${medal}${r.name}${r.you?' (Du)':''}</span><span class="sb-score">${r.score}</span></div>`;}).join('');
-  document.getElementById('sb-entries').innerHTML=html||'<div style="color:#666;font-size:10px">Noch keine Punkte</div>';
+  const youS=t('you_suffix');
+  const html=rows.map((r,i)=>{const medal=i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':'';return `<div class="sb-row${r.you?' you':''}"><span class="sb-name"><span class="sb-dot" style="background:${escHtml(r.color)}"></span>${medal}${escHtml(r.name)}${r.you?escHtml(youS):''}</span><span class="sb-score">${escHtml(r.score)}</span></div>`;}).join('');
+  document.getElementById('sb-entries').innerHTML=html||'<div style="color:#666;font-size:10px">'+escHtml(t('sb_empty'))+'</div>';
 }
 function showGameMsg(msg){const el=document.getElementById('game-msg');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3000);}
 let endAutoCloseTimer=null;
@@ -950,21 +1227,23 @@ function endGame(title,result,detail,leaderboard,autoCloseMs,abResults){
   // Leaderboard rendern (oder leeren)
   const lbEl=document.getElementById('end-leaderboard');
   if(Array.isArray(leaderboard)&&leaderboard.length){
+    const youS=t('you_suffix');
     const html=leaderboard.map((r,i)=>{
       // Bei Race: Medaillen nur für finishers; Nicht-Finisher ohne Rang
       const isRaceNotFin=r.finished===false;
       const medal=isRaceNotFin?'–':(i===0?'🥇':i===1?'🥈':i===2?'🥉':('#'+(i+1)));
-      return `<div class="sb-row${r.you?' you':''}"><span class="sb-name"><span class="sb-medal">${medal}</span><span class="sb-dot" style="background:${escHtml(r.color||'#888')}"></span>${escHtml(r.name||'?')}${r.you?' (Du)':''}</span><span class="sb-score">${escHtml(r.score)}</span></div>`;
+      return `<div class="sb-row${r.you?' you':''}"><span class="sb-name"><span class="sb-medal">${medal}</span><span class="sb-dot" style="background:${escHtml(r.color||'#888')}"></span>${escHtml(r.name||'?')}${r.you?escHtml(youS):''}</span><span class="sb-score">${escHtml(r.score)}</span></div>`;
     }).join('');
     lbEl.innerHTML=html;lbEl.classList.add('show');
   } else {lbEl.innerHTML='';lbEl.classList.remove('show');}
   // A/B-Ergebnisse rendern (oder leeren)
   const abEl=document.getElementById('end-ab-results');
   if(Array.isArray(abResults)&&abResults.length){
-    const renderChips=list=>list.length?list.map(p=>`<span class="name-chip${p.id===myId?' you':''}"><span class="dot" style="background:${escHtml(p.color||'#888')}"></span>${escHtml(p.name||'?')}${p.id===myId?' (Du)':''}</span>`).join(''):'<span style="color:#6b7280">—</span>';
+    const youS=t('you_suffix');
+    const renderChips=list=>list.length?list.map(p=>`<span class="name-chip${p.id===myId?' you':''}"><span class="dot" style="background:${escHtml(p.color||'#888')}"></span>${escHtml(p.name||'?')}${p.id===myId?escHtml(youS):''}</span>`).join(''):'<span style="color:#6b7280">—</span>';
     const html=abResults.map(q=>{
-      const na=Array.isArray(q.noAnswer)&&q.noAnswer.length?`<div class="abr-noans">Keine Antwort: ${q.noAnswer.map(p=>escHtml(p.name)).join(', ')}</div>`:'';
-      return `<div class="abr-q"><div class="abr-q-title"><span class="num">Frage ${q.idx+1}:</span>${escHtml(q.q)}</div><div class="abr-opts"><div class="abr-opt a"><div class="label">🅰️ ${escHtml(q.a)} <span style="color:#9ca3af;font-weight:400">(${q.aPlayers.length})</span></div><div class="names">${renderChips(q.aPlayers)}</div></div><div class="abr-opt b"><div class="label">🅱️ ${escHtml(q.b)} <span style="color:#9ca3af;font-weight:400">(${q.bPlayers.length})</span></div><div class="names">${renderChips(q.bPlayers)}</div></div></div>${na}</div>`;
+      const na=Array.isArray(q.noAnswer)&&q.noAnswer.length?`<div class="abr-noans">${escHtml(t('end_no_answer',{names:q.noAnswer.map(p=>p.name).join(', ')}))}</div>`:'';
+      return `<div class="abr-q"><div class="abr-q-title"><span class="num">${escHtml(t('end_q_label',{n:q.idx+1}))}</span>${escHtml(q.q)}</div><div class="abr-opts"><div class="abr-opt a"><div class="label">🅰️ ${escHtml(q.a)} <span style="color:#9ca3af;font-weight:400">(${q.aPlayers.length})</span></div><div class="names">${renderChips(q.aPlayers)}</div></div><div class="abr-opt b"><div class="label">🅱️ ${escHtml(q.b)} <span style="color:#9ca3af;font-weight:400">(${q.bPlayers.length})</span></div><div class="names">${renderChips(q.bPlayers)}</div></div></div>${na}</div>`;
     }).join('');
     abEl.innerHTML=html;abEl.classList.add('show');
   } else {abEl.innerHTML='';abEl.classList.remove('show');}
@@ -997,18 +1276,18 @@ function stopGameEarly(){
   if(socket&&socket.connected){socket.emit('stop-game');return;}
   // Single-Player: lokales Popup inkl. Leaderboard (falls vorhanden)
   const type=activeGame.type;
-  if(type==='tag')endGame('Abgebrochen','Gefangen: '+(activeGame.score||0),`Spiel vorzeitig beendet.`);
+  if(type==='tag')endGame(t('end_stopped'),t('score_tag',{n:activeGame.score||0}),t('end_early_detail'));
   else if(type==='collect'){
-    const rows=[{id:'me',name:player?.name||'Du',color:player?.color||'#3b82f6',score:activeGame.score||0,you:true}];
+    const rows=[{id:'me',name:player?.name||(LANG==='en'?'You':'Du'),color:player?.color||'#3b82f6',score:activeGame.score||0,you:true}];
     if(activeGame.simScores)Object.entries(activeGame.simScores).forEach(([n,s])=>{
       const e=entities.find(x=>x.name===n);
       rows.push({id:n,name:n,color:e?e.color:'#888',score:s,you:false});
     });
     rows.sort((a,b)=>b.score-a.score);
-    endGame('Abgebrochen','⭐ '+activeGame.score,`Dein Score: ${activeGame.score}`,rows,10000);
+    endGame(t('end_stopped'),'⭐ '+activeGame.score,t('end_your_score',{n:activeGame.score}),rows,10000);
   }
-  else if(type==='ab')endGame('Abgebrochen','🅰️🅱️',`${activeGame.currentQ} von ${activeGame.questions.length} Fragen beantwortet.`);
-  else if(type==='race')endGame('Abgebrochen',activeGame.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':'Nicht geschafft','Spiel vorzeitig beendet.');
+  else if(type==='ab')endGame(t('end_stopped'),'🅰️🅱️',t('end_ab_progress',{cur:activeGame.currentQ,total:activeGame.questions.length}));
+  else if(type==='race')endGame(t('end_stopped'),activeGame.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':t('end_race_not'),t('end_early_detail'));
 }
 
 // ===================== MINIGAME MENU =====================
@@ -1018,42 +1297,40 @@ function closeMinigameMenu(){document.getElementById('minigame-overlay').classLi
 function showMgSetup(type){
   document.getElementById('mg-menu').style.display='none';
   const area=document.getElementById('mg-setup-area');area.style.display='';
+  area.setAttribute('data-type',type);
+  const E=escHtml;
   if(type==='tag'){
-    area.innerHTML=`<h3>🏷️ Fangen — Setup</h3>
+    area.innerHTML=`<h3>${E(t('mg_tag_setup'))}</h3>
       <div class="mg-setup">
-        <label>Dauer (Sekunden)</label><input type="number" id="mg-tag-dur" value="60" min="15" max="180">
-        <label>Spielfeld-Größe</label>
-        <select id="mg-tag-size"><option value="small">Klein (400x300)</option><option value="medium" selected>Mittel (600x450)</option><option value="large">Groß (900x600)</option></select>
-        <p style="font-size:10px;color:#888;margin-top:6px">Du bist "es" — fang so viele wie möglich! Sprint mit Shift.</p>
-        <button class="mg-start" onclick="startTagGame()">🏷️ Fangen starten!</button>
+        <label>${E(t('mg_duration'))}</label><input type="number" id="mg-tag-dur" value="60" min="15" max="180">
+        <label>${E(t('mg_arena'))}</label>
+        <select id="mg-tag-size"><option value="small">${E(t('size_small'))}</option><option value="medium" selected>${E(t('size_medium'))}</option><option value="large">${E(t('size_large'))}</option></select>
+        <p style="font-size:10px;color:#888;margin-top:6px">${E(t('mg_tag_hint'))}</p>
+        <button class="mg-start" onclick="startTagGame()">${E(t('mg_tag_start'))}</button>
       </div>`;
   } else if(type==='collect'){
-    area.innerHTML=`<h3>⭐ Sammelspiel — Setup</h3>
+    area.innerHTML=`<h3>${E(t('mg_col_setup'))}</h3>
       <div class="mg-setup">
-        <label>Dauer (Sekunden)</label><input type="number" id="mg-col-dur" value="45" min="15" max="120">
-        <p style="font-size:10px;color:#888;margin-top:6px">Lauf über Items um sie einzusammeln! ⭐=1, 💰=2, 💎=3, 🏆=5 Punkte</p>
-        <button class="mg-start" onclick="startCollectGame()">⭐ Sammeln starten!</button>
+        <label>${E(t('mg_duration'))}</label><input type="number" id="mg-col-dur" value="45" min="15" max="120">
+        <p style="font-size:10px;color:#888;margin-top:6px">${E(t('mg_col_hint'))}</p>
+        <button class="mg-start" onclick="startCollectGame()">${E(t('mg_col_start'))}</button>
       </div>`;
   } else if(type==='ab'){
-    area.innerHTML=`<h3>🅰️🅱️ A oder B — Setup</h3>
+    area.innerHTML=`<h3>${E(t('mg_ab_setup'))}</h3>
       <div class="mg-setup">
-        <label>Fragen (eine pro Zeile, Format: Frage | Antwort A | Antwort B)</label>
-        <textarea id="mg-ab-questions" placeholder="Bücher oder Kino? | Bücher | Kino\nBerge oder Meer? | Berge | Meer\nFrühaufsteher oder Nachteule? | Frühaufsteher | Nachteule">Bücher oder Kino? | Bücher | Kino
-Berge oder Meer? | Berge | Meer
-Frühaufsteher oder Nachteule? | Frühaufsteher | Nachteule
-Pizza oder Pasta? | Pizza | Pasta
-Home Office oder Büro? | Home Office | Büro</textarea>
-        <label>Zeit pro Frage (Sekunden)</label><input type="number" id="mg-ab-time" value="10" min="5" max="30">
-        <button class="mg-start" onclick="startABGame()">🅰️🅱️ Starten!</button>
+        <label>${E(t('mg_ab_questions'))}</label>
+        <textarea id="mg-ab-questions">${E(t('mg_ab_default'))}</textarea>
+        <label>${E(t('mg_ab_time'))}</label><input type="number" id="mg-ab-time" value="10" min="5" max="30">
+        <button class="mg-start" onclick="startABGame()">${E(t('mg_ab_start'))}</button>
       </div>`;
   } else if(type==='race'){
-    area.innerHTML=`<h3>🏁 Wettrennen — Setup</h3>
+    area.innerHTML=`<h3>${E(t('mg_race_setup'))}</h3>
       <div class="mg-setup">
-        <label>Zeitlimit (Sekunden)</label><input type="number" id="mg-race-dur" value="30" min="10" max="120">
-        <label>Distanz</label>
-        <select id="mg-race-dist"><option value="short">Kurz (~400px)</option><option value="medium" selected>Mittel (~800px)</option><option value="long">Lang (~1400px)</option></select>
-        <p style="font-size:10px;color:#888;margin-top:6px">Renn vom Start zum Ziel! Sprint mit Shift.</p>
-        <button class="mg-start" onclick="startRaceGame()">🏁 Rennen starten!</button>
+        <label>${E(t('mg_race_limit'))}</label><input type="number" id="mg-race-dur" value="30" min="10" max="120">
+        <label>${E(t('mg_race_dist'))}</label>
+        <select id="mg-race-dist"><option value="short">${E(t('dist_short'))}</option><option value="medium" selected>${E(t('dist_medium'))}</option><option value="long">${E(t('dist_long'))}</option></select>
+        <p style="font-size:10px;color:#888;margin-top:6px">${E(t('mg_race_hint'))}</p>
+        <button class="mg-start" onclick="startRaceGame()">${E(t('mg_race_start'))}</button>
       </div>`;
   }
 }
@@ -1078,9 +1355,9 @@ function startTagGame(){
   doCountdown(()=>{
     activeGame={type:'tag',duration:dur,elapsed:0,score:0,arena};
     document.getElementById('game-hud').classList.add('show');
-    document.getElementById('game-title').textContent='🏷️ FANGEN';
-    document.getElementById('game-score').textContent='Gefangen: 0';
-    addChatMsg('System','','🏷️ Fangen gestartet!',true);
+    document.getElementById('game-title').textContent=t('gt_tag');
+    document.getElementById('game-score').textContent=t('score_tag',{n:0});
+    addChatMsg('System','',t('sys.tag_local_started'),true);
   });
 }
 
@@ -1097,18 +1374,18 @@ function startCollectGame(){
   doCountdown(()=>{
     activeGame={type:'collect',duration:dur,elapsed:0,score:0,simScores:{}};
     document.getElementById('game-hud').classList.add('show');
-    document.getElementById('game-title').textContent='⭐ SAMMELN';
-    document.getElementById('game-score').textContent='⭐ 0 Punkte';
-    document.getElementById('game-info').innerHTML='<span class="legend-item">⭐ 1P</span><span class="legend-item">🍎 1P</span><span class="legend-item">💰 2P</span><span class="legend-item">💎 3P</span><span class="legend-item">🏆 5P</span> — laufe drüber';
+    document.getElementById('game-title').textContent=t('gt_col');
+    document.getElementById('game-score').textContent=t('score_col',{n:0});
+    document.getElementById('game-info').innerHTML=t('info_col_legend_short');
     document.getElementById('game-scoreboard').classList.add('show');
-    document.getElementById('sb-title').textContent='⭐ Punktestand';
+    document.getElementById('sb-title').textContent='⭐ '+t('scoreboard');
   });
 }
 
 function startABGame(){
   const raw=document.getElementById('mg-ab-questions').value.trim().split('\n').filter(l=>l.includes('|'));
   const questions=raw.map(l=>{const[q,a,b]=l.split('|').map(s=>s.trim());return{q,a:a||'A',b:b||'B'};});
-  if(questions.length===0){alert('Bitte mindestens eine Frage eingeben!');return;}
+  if(questions.length===0){alert(t('mg_ab_alert_empty'));return;}
   const timePerQ=parseInt(document.getElementById('mg-ab-time').value)*1000||10000;
   if(socket&&socket.connected){socket.emit('start-game',{type:'ab',questions,timePerQ,startTime:Date.now()});closeMinigameMenu();return;}
   // Single-Player fallback
@@ -1118,7 +1395,7 @@ function startABGame(){
   doCountdown(()=>{
     activeGame={type:'ab',duration:999999,elapsed:0,questions,currentQ:0,timePerQ,questionTimer:0};
     document.getElementById('game-hud').classList.add('show');
-    document.getElementById('game-title').textContent='🅰️🅱️ A ODER B';
+    document.getElementById('game-title').textContent=t('gt_ab');
     document.getElementById('game-score').textContent='';
     showNextABQuestion();
   });
@@ -1129,9 +1406,9 @@ function showNextABQuestion(){
   if(!q)return;
   activeGame.questionTimer=activeGame.timePerQ;
   document.getElementById('game-score').textContent=q.q;
-  document.getElementById('game-title').innerHTML=`Frage ${activeGame.currentQ+1}/${activeGame.questions.length}`;
-  showGameMsg(`🅰️ ${q.a}   |   🅱️ ${q.b}`);
-  addChatMsg('System','',`❓ ${q.q} — 🅰️ ${q.a} | 🅱️ ${q.b}`,true);
+  document.getElementById('game-title').innerHTML=t('q_of',{i:activeGame.currentQ+1,n:activeGame.questions.length});
+  showGameMsg(t('ab_hint',{a:q.a,b:q.b}));
+  addChatMsg('System','',t('sys.ab_question',{q:q.q,a:q.a,b:q.b}),true);
 }
 
 function startRaceGame(){
@@ -1148,11 +1425,11 @@ function startRaceGame(){
   doCountdown(()=>{
     activeGame={type:'race',duration:dur,elapsed:0,finished:false,finishTime:0,startPos,totalDist:d};
     document.getElementById('game-hud').classList.add('show');
-    document.getElementById('game-title').textContent='🏁 WETTRENNEN';
-    document.getElementById('game-score').textContent='Lauf zum Ziel!';
-    document.getElementById('game-info').innerHTML='🏁 Ziel ist markiert (grüner Pfeil zeigt Richtung). Sprint mit <kbd>Shift</kbd>!';
+    document.getElementById('game-title').textContent=t('gt_race');
+    document.getElementById('game-score').textContent=t('score_race_goto');
+    document.getElementById('game-info').innerHTML=t('info_race_sprint');
     document.getElementById('race-arrow').classList.add('show');
-    addChatMsg('System','',`🏁 Wettrennen gestartet — Ziel ist ${Math.round(d)}px entfernt!`,true);
+    addChatMsg('System','',t('sys.race_local_started',{px:Math.round(d)}),true);
   });
 }
 
@@ -1322,7 +1599,7 @@ function render(){
     ctx.fillStyle='rgba(255,50,50,.04)';ctx.fillRect(a.x,a.y,a.w,a.h);
     // Label
     ctx.font='bold 6px sans-serif';ctx.fillStyle='rgba(255,100,100,.7)';ctx.textAlign='center';
-    ctx.fillText('🏷️ FANGEN ARENA',a.x+a.w/2,a.y-4);
+    ctx.fillText(t('arena_label'),a.x+a.w/2,a.y-4);
   }
   // Collect items
   if(activeGame?.type==='collect'){
@@ -1368,7 +1645,7 @@ function render(){
       ctx.beginPath();ctx.moveTo(activeGame.startPos.x,activeGame.startPos.y);ctx.lineTo(gx,gy);ctx.stroke();ctx.setLineDash([]);
       // Start marker
       ctx.fillStyle='rgba(251,191,36,.5)';ctx.beginPath();ctx.arc(activeGame.startPos.x,activeGame.startPos.y,6,0,Math.PI*2);ctx.fill();
-      ctx.font='bold 5px sans-serif';ctx.fillStyle='#fbbf24';ctx.textAlign='center';ctx.fillText('START',activeGame.startPos.x,activeGame.startPos.y-8);
+      ctx.font='bold 5px sans-serif';ctx.fillStyle='#fbbf24';ctx.textAlign='center';ctx.fillText(t('start_label'),activeGame.startPos.x,activeGame.startPos.y-8);
     }
     // Pulsing outer ring (big, visible)
     const pulse=(Date.now()/500)%1;
@@ -1382,7 +1659,7 @@ function render(){
     const bob=Math.sin(Date.now()/200)*2;
     ctx.font='28px sans-serif';ctx.textAlign='center';ctx.fillText('🏁',gx,gy+10+bob);
     // Label above
-    ctx.font='bold 6px sans-serif';ctx.fillStyle='#22c55e';ctx.fillText('ZIEL',gx,raceGoal.y-6);
+    ctx.font='bold 6px sans-serif';ctx.fillStyle='#22c55e';ctx.fillText(t('goal_label'),gx,raceGoal.y-6);
   }
 
   // Particles under entities (above ground)
@@ -1420,14 +1697,14 @@ function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x
 function wrapText(ctx,text,maxW){const words=text.split(' ');const lines=[];let line='';words.forEach(w=>{const test=line?line+' '+w:w;if(ctx.measureText(test).width>maxW&&line){lines.push(line);line=w;}else line=test;});if(line)lines.push(line);return lines;}
 
 // ===================== HUD =====================
-function updateHUD(){document.getElementById('hud-pos').textContent=`${Math.round(player.x)}, ${Math.round(player.y)}`;document.getElementById('hud-online').textContent=`Online: ${entities.length}`;}
+function updateHUD(){document.getElementById('hud-pos').textContent=`${Math.round(player.x)}, ${Math.round(player.y)}`;document.getElementById('hud-online').textContent=t('online')+`: ${entities.length}`;}
 function updateMinimap(){const mc=document.getElementById('minimap-canvas'),mx=mc.getContext('2d'),sx=mc.width/WORLD_W,sy=mc.height/WORLD_H;mx.fillStyle='#1e3a1e';mx.fillRect(0,0,mc.width,mc.height);
 worldObjs.filter(o=>o.type==='tree').forEach(t=>{mx.fillStyle='#2d5a2d';mx.fillRect(t.x*sx-1,t.y*sy-1,2,2);});
 if(raceGoal){mx.fillStyle='#22c55e';mx.fillRect(raceGoal.x*sx-2,raceGoal.y*sy-2,5,5);}
 if(activeGame?.type==='tag'){const a=activeGame.arena;mx.strokeStyle='#f87171';mx.lineWidth=1;mx.strokeRect(a.x*sx,a.y*sy,a.w*sx,a.h*sy);}
 entities.forEach(e=>{mx.fillStyle=e.isAgent?'#a855f7':e.color;mx.beginPath();mx.arc(e.x*sx,e.y*sy,e===player?3:2,0,Math.PI*2);mx.fill();});
 const vw=canvas.width/SCALE,vh=canvas.height/SCALE;mx.strokeStyle='rgba(255,255,255,.3)';mx.lineWidth=1;mx.strokeRect(camX*sx,camY*sy,vw*sx,vh*sy);}
-function updateOnlineList(){document.getElementById('online-entries').innerHTML=entities.map(e=>`<div class="online-entry"><div class="online-dot" style="background:${e.color}"></div><span>${e.isAgent?'🤖 ':''}${e.name}${e===player?' (Du)':''}${e.tagged?' ❌':''}</span></div>`).join('');}
+function updateOnlineList(){const youS=t('you_suffix');document.getElementById('online-entries').innerHTML=entities.map(e=>`<div class="online-entry"><div class="online-dot" style="background:${escHtml(e.color)}"></div><span>${e.isAgent?'🤖 ':''}${escHtml(e.name)}${e===player?escHtml(youS):''}${e.tagged?' ❌':''}</span></div>`).join('');}
 
 // ===================== CHAT =====================
 function addChatMsg(n,c,t,sys=false,ag=false){
@@ -1449,7 +1726,7 @@ function sendChat(){const inp=document.getElementById('chat-input'),t=inp.value.
 if(socket&&socket.connected){socket.emit('chat',t);return;}
 addChatMsg(player.name,player.color,t);
 const near=entities.filter(e=>e.isAgent&&e.agentCfg?.active&&distance(e,player)<350);
-if(near.length>0&&Math.random()>.3){const a=near[Math.floor(Math.random()*near.length)];setTimeout(()=>{const p=PERSONALITIES[a.agentCfg.personality];const r=p?p.msgs[Math.floor(Math.random()*p.msgs.length)]:"Hmm!";a.speechText=r;a.speechTimer=4000;addChatMsg(a.name,a.color,r,false,true);},1500+Math.random()*2000);}}
+if(near.length>0&&Math.random()>.3){const a=near[Math.floor(Math.random()*near.length)];setTimeout(()=>{const p=PERSONALITIES[a.agentCfg.personality];const pick=p?p.msgs[Math.floor(Math.random()*p.msgs.length)]:null;const r=pick?(LANG==='en'?(pick.en||pick.de):(pick.de||pick.en)):"Hmm!";a.speechText=r;a.speechTimer=4000;addChatMsg(a.name,a.color,r,false,true);},1500+Math.random()*2000);}}
 function toggleChatPanel(){chatHidden=!chatHidden;document.getElementById('chat-panel').classList.toggle('hidden',chatHidden);const b=document.getElementById('chat-toggle-btn');b.classList.toggle('chat-off',chatHidden);b.textContent=chatHidden?'🚫':'💬';if(chatHidden){document.getElementById('chat-input').blur();chatFocused=false;}}
 
 // ===================== AGENTS QUICK TOGGLE =====================
@@ -1458,33 +1735,36 @@ function quickToggleAgents(){
   if(socket&&socket.connected){socket.emit('toggle-agents');return;}
   agentsEnabled=!agentsEnabled;
   const btn=document.getElementById('agents-quick-toggle');
-  btn.textContent=agentsEnabled?'👁 Agents An':'🚫 Agents Aus';
+  btn.textContent=t(agentsEnabled?'btn_agents_on':'btn_agents_off');
   btn.classList.toggle('agents-off',!agentsEnabled);
   spawnAgentsFromConfig();
-  addChatMsg('System','',agentsEnabled?'Alle Agents aktiviert.':'Alle Agents deaktiviert — nur Team-Modus!',true);
+  addChatMsg('System','',t(agentsEnabled?'sys.all_agents_on':'sys.all_agents_off'),true);
 }
 
 // ===================== CONFIG PANEL =====================
 function toggleConfig(){configOpen=!configOpen;document.getElementById('config-overlay').classList.toggle('open',configOpen);if(configOpen)renderConfigPanel();}
-function renderConfigPanel(){document.getElementById('agent-config-list').innerHTML=agentConfigs.map((cfg,i)=>`
+function renderConfigPanel(){
+  const E=escHtml;
+  document.getElementById('agent-config-list').innerHTML=agentConfigs.map((cfg,i)=>`
   <div class="config-section collapsed" id="as-${i}"><div class="config-section-header" onclick="document.getElementById('as-${i}').classList.toggle('collapsed')">
-    <h3><span style="color:${cfg.color}">${PERSONALITIES[cfg.personality]?.emoji||'🤖'}</span> ${cfg.name}
-      <span class="agent-status ${cfg.active?'active':'paused'}"><span class="agent-status-dot"></span>${cfg.active?'An':'Aus'}</span></h3>
+    <h3><span style="color:${E(cfg.color)}">${PERSONALITIES[cfg.personality]?.emoji||'🤖'}</span> ${E(cfg.name)}
+      <span class="agent-status ${cfg.active?'active':'paused'}"><span class="agent-status-dot"></span>${E(t(cfg.active?'status_on':'status_off'))}</span></h3>
     <span class="section-toggle">▼</span></div>
   <div class="config-section-body">
-    <div class="config-row"><label>Name</label><input type="text" value="${cfg.name}" maxlength="20" onchange="uCfg(${i},'name',this.value)">
-      <label style="min-width:35px">Farbe</label><input type="color" value="${cfg.color}" onchange="uCfg(${i},'color',this.value)"></div>
-    <div class="config-row"><label>Persönlichkeit</label><div class="personality-chips">
-      ${Object.entries(PERSONALITIES).map(([k,p])=>`<span class="p-chip ${cfg.personality===k?'active':''}" onclick="uCfg(${i},'personality','${k}');renderConfigPanel()">${p.emoji} ${p.label}</span>`).join('')}</div></div>
-    <div class="config-row"><label>Speed</label><input type="range" min="0.2" max="5" step="0.1" value="${cfg.speed}" oninput="uCfg(${i},'speed',+this.value);this.nextElementSibling.textContent=this.value+'x'"><span class="range-val">${cfg.speed}x</span></div>
-    <div class="config-row"><label>Chat-Freq</label><input type="range" min="3" max="60" step="1" value="${cfg.chatFreq}" oninput="uCfg(${i},'chatFreq',+this.value);this.nextElementSibling.textContent=this.value+'s'"><span class="range-val">${cfg.chatFreq}s</span></div>
-    <div class="config-row"><label>Wanderradius</label><input type="range" min="50" max="1000" step="10" value="${cfg.wanderRadius}" oninput="uCfg(${i},'wanderRadius',+this.value);this.nextElementSibling.textContent=this.value"><span class="range-val">${cfg.wanderRadius}</span></div>
-    <div class="config-row"><label>Eigene Msgs</label><textarea onchange="uCfg(${i},'customMsgs',this.value.split('\\n').filter(l=>l.trim()))">${(cfg.customMsgs||[]).join('\n')}</textarea></div>
+    <div class="config-row"><label>${E(t('cfg_name'))}</label><input type="text" value="${E(cfg.name)}" maxlength="20" onchange="uCfg(${i},'name',this.value)">
+      <label style="min-width:35px">${E(t('cfg_color'))}</label><input type="color" value="${E(cfg.color)}" onchange="uCfg(${i},'color',this.value)"></div>
+    <div class="config-row"><label>${E(t('cfg_personality'))}</label><div class="personality-chips">
+      ${Object.entries(PERSONALITIES).map(([k,p])=>`<span class="p-chip ${cfg.personality===k?'active':''}" onclick="uCfg(${i},'personality','${k}');renderConfigPanel()">${p.emoji} ${E(pLabel(k))}</span>`).join('')}</div></div>
+    <div class="config-row"><label>${E(t('cfg_speed'))}</label><input type="range" min="0.2" max="5" step="0.1" value="${cfg.speed}" oninput="uCfg(${i},'speed',+this.value);this.nextElementSibling.textContent=this.value+'x'"><span class="range-val">${cfg.speed}x</span></div>
+    <div class="config-row"><label>${E(t('cfg_chatfreq'))}</label><input type="range" min="3" max="60" step="1" value="${cfg.chatFreq}" oninput="uCfg(${i},'chatFreq',+this.value);this.nextElementSibling.textContent=this.value+'s'"><span class="range-val">${cfg.chatFreq}s</span></div>
+    <div class="config-row"><label>${E(t('cfg_wander'))}</label><input type="range" min="50" max="1000" step="10" value="${cfg.wanderRadius}" oninput="uCfg(${i},'wanderRadius',+this.value);this.nextElementSibling.textContent=this.value"><span class="range-val">${cfg.wanderRadius}</span></div>
+    <div class="config-row"><label>${E(t('cfg_custom'))}</label><textarea onchange="uCfg(${i},'customMsgs',this.value.split('\\n').filter(l=>l.trim()))">${E((cfg.customMsgs||[]).join('\n'))}</textarea></div>
     <div class="agent-actions">
       <button class="btn-sm ${cfg.active?'btn-warning':'btn-success'}" onclick="tAgent(${i})">${cfg.active?'⏸':'▶'}</button>
       <button class="btn-sm btn-success" onclick="tpAgent(${i})">📍</button>
       <button class="btn-sm btn-danger" onclick="rmAgent(${i})">🗑</button></div>
-  </div></div>`).join('');}
+  </div></div>`).join('');
+}
 let _syncCfgTimer=null;
 function syncAgentConfigs(){if(!socket||!socket.connected)return;clearTimeout(_syncCfgTimer);_syncCfgTimer=setTimeout(()=>{socket.emit('update-agent-configs',agentConfigs);},250);}
 function uCfg(i,k,v){agentConfigs[i][k]=v;const a=entities.find(e=>e.isAgent&&e.agentCfg===agentConfigs[i]);if(a){if(k==='name')a.name=v;if(k==='color'){a.color=v;rebuildSprite(a);}}syncAgentConfigs();}
@@ -1494,8 +1774,8 @@ function rmAgent(i){agentConfigs.splice(i,1);spawnAgentsFromConfig();renderConfi
 function addNewAgent(){const pk=Object.keys(PERSONALITIES);agentConfigs.push({name:`Agent ${agentConfigs.length+1}`,color:`hsl(${Math.random()*360},70%,50%)`,personality:pk[Math.floor(Math.random()*pk.length)],speed:1+Math.random()*1.5,chatFreq:8+Math.floor(Math.random()*15),wanderRadius:200+Math.floor(Math.random()*400),active:true,customMsgs:[]});spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}
 function toggleAllAgents(){const any=agentConfigs.some(c=>c.active);agentConfigs.forEach(c=>c.active=!any);spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}
 function resetAllAgents(){agentConfigs=JSON.parse(JSON.stringify(DEFAULT_AGENTS));spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}
-function exportConfig(){navigator.clipboard.writeText(JSON.stringify(agentConfigs,null,2)).then(()=>addChatMsg('System','','Config kopiert!',true)).catch(()=>prompt('Config:',JSON.stringify(agentConfigs)));}
-function importConfigPrompt(){const j=prompt('JSON:');if(!j)return;try{const p=JSON.parse(j);if(Array.isArray(p)){agentConfigs=p;spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}}catch(e){alert('Ungültig!');}}
+function exportConfig(){navigator.clipboard.writeText(JSON.stringify(agentConfigs,null,2)).then(()=>addChatMsg('System','',t('sys.cfg_copied'),true)).catch(()=>prompt('Config:',JSON.stringify(agentConfigs)));}
+function importConfigPrompt(){const j=prompt('JSON:');if(!j)return;try{const p=JSON.parse(j);if(Array.isArray(p)){agentConfigs=p;spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}}catch(e){alert(t('sys.cfg_invalid'));}}
 function loadPreset(p){const presets={party:[{name:'DJ Bot',color:'#f43f5e',personality:'energetisch',speed:3,chatFreq:5,wanderRadius:600,active:true},{name:'Confetti',color:'#fbbf24',personality:'witzig',speed:4,chatFreq:4,wanderRadius:800,active:true}],zen:[{name:'Sensei',color:'#6ee7b7',personality:'philosophisch',speed:.3,chatFreq:30,wanderRadius:150,active:true}],chaos:Array.from({length:10},(_,i)=>({name:`C-${i+1}`,color:`hsl(${i*36},80%,55%)`,personality:Object.keys(PERSONALITIES)[i%6],speed:2+Math.random()*3,chatFreq:3,wanderRadius:600,active:true})),minimal:[{name:'Helper',color:'#3b82f6',personality:'freundlich',speed:1,chatFreq:20,wanderRadius:300,active:true}],army:Array.from({length:8},(_,i)=>({name:`Soldat ${i+1}`,color:`hsl(${120+i*5},40%,${30+i*3}%)`,personality:'technisch',speed:2,chatFreq:10,wanderRadius:200,active:true}))};if(presets[p]){agentConfigs=presets[p];spawnAgentsFromConfig();renderConfigPanel();syncAgentConfigs();}}
 
 // ===================== INPUT =====================

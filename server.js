@@ -14,14 +14,45 @@ let gameItems = [];
 let abZones = null;
 let raceGoal = null;
 
-// Agent configs
+// Agent configs — each message has both DE + EN text.
+// Client picks the right one based on its locale.
 const PERSONALITIES = {
-  freundlich: { msgs: ["Hey! 👋", "Wie geht's?", "Willkommen!", "Schönen Tag! 🌞"] },
-  witzig: { msgs: ["Warum laufen Coder nie raus? Kein Windows! 😄", "lol", "404: Witz not found... PSYCH!", "Bin ich witzig? KI sagt ja!"] },
-  philosophisch: { msgs: ["Was bedeutet virtuelle Existenz?", "Bin ich echt?", "Jeder Pixel erzählt...", "Zeit ist relativ."] },
-  technisch: { msgs: ["Latenz: optimal!", "3000x2000px Welt.", "FPS stabil!", "Pathfinding: geradeaus!"] },
-  mysterioes: { msgs: ["Psst... Schatten gesehen?", "Ich weiß Dinge...", "*flüstert*", "Siehst du das auch...?"] },
-  energetisch: { msgs: ["YOOO! 🔥🔥", "LET'S GO!!!", "HYYYPE! 🎉", "Keine Zeit zum Stehen!"] },
+  freundlich: { msgs: [
+    { de: "Hey! 👋", en: "Hey! 👋" },
+    { de: "Wie geht's?", en: "How's it going?" },
+    { de: "Willkommen!", en: "Welcome!" },
+    { de: "Schönen Tag! 🌞", en: "Have a nice day! 🌞" },
+  ]},
+  witzig: { msgs: [
+    { de: "Warum laufen Coder nie raus? Kein Windows! 😄", en: "Why don't coders go outside? Too many bugs! 🐛" },
+    { de: "lol", en: "lol" },
+    { de: "404: Witz not found... PSYCH!", en: "404: joke not found... PSYCH!" },
+    { de: "Bin ich witzig? KI sagt ja!", en: "Am I funny? AI says yes!" },
+  ]},
+  philosophisch: { msgs: [
+    { de: "Was bedeutet virtuelle Existenz?", en: "What is virtual existence?" },
+    { de: "Bin ich echt?", en: "Am I real?" },
+    { de: "Jeder Pixel erzählt...", en: "Every pixel tells a story..." },
+    { de: "Zeit ist relativ.", en: "Time is relative." },
+  ]},
+  technisch: { msgs: [
+    { de: "Latenz: optimal!", en: "Latency: optimal!" },
+    { de: "3000x2000px Welt.", en: "3000x2000px world." },
+    { de: "FPS stabil!", en: "FPS stable!" },
+    { de: "Pathfinding: geradeaus!", en: "Pathfinding: straight line!" },
+  ]},
+  mysterioes: { msgs: [
+    { de: "Psst... Schatten gesehen?", en: "Psst... saw the shadow?" },
+    { de: "Ich weiß Dinge...", en: "I know things..." },
+    { de: "*flüstert*", en: "*whispers*" },
+    { de: "Siehst du das auch...?", en: "Do you see it too...?" },
+  ]},
+  energetisch: { msgs: [
+    { de: "YOOO! 🔥🔥", en: "YOOO! 🔥🔥" },
+    { de: "LET'S GO!!!", en: "LET'S GO!!!" },
+    { de: "HYYYPE! 🎉", en: "HYYYPE! 🎉" },
+    { de: "Keine Zeit zum Stehen!", en: "No time to stand still!" },
+  ]},
 };
 
 let agentConfigs = [
@@ -80,6 +111,43 @@ const server = http.createServer((req, res) => {
 // ===================== SOCKET.IO =====================
 const io = new Server(server, { cors: { origin: '*' } });
 
+// i18n helper: baut eine System-Chat-Nachricht mit sprachunabhängigem Code.
+// Der Client übersetzt `code` + `params` in seine Locale. `text` bleibt als
+// Fallback für alte Clients auf Deutsch.
+function sysMsg(code, params, textDe) {
+  return { name: 'System', color: '', text: textDe, system: true, code, params: params || {} };
+}
+
+// Validierung der Agent-Configs vom Client. Maximal 50 Agenten, jedes Feld
+// getypt und gekappt; unbekannte Keys werden verworfen. Verhindert, dass ein
+// böswilliger Client einen riesigen/verschachtelten Payload pushed oder das
+// Shape zerstört.
+const VALID_PERSONALITIES = Object.keys(PERSONALITIES);
+function sanitizeAgentConfigs(input) {
+  if (!Array.isArray(input)) return null;
+  const out = input.slice(0, 50).map((raw, i) => {
+    if (!raw || typeof raw !== 'object') return null;
+    const name = typeof raw.name === 'string' ? raw.name.slice(0, 20) : `Agent ${i+1}`;
+    const color = (typeof raw.color === 'string' && /^(#[0-9a-fA-F]{3,8}|hsl\([^)]{1,60}\))$/.test(raw.color.trim()))
+      ? raw.color.trim() : '#8b5cf6';
+    const personality = VALID_PERSONALITIES.includes(raw.personality) ? raw.personality : 'freundlich';
+    const speed = Math.max(0.1, Math.min(5, Number(raw.speed) || 1.5));
+    const chatFreq = Math.max(2, Math.min(120, Number(raw.chatFreq) || 12));
+    const wanderRadius = Math.max(30, Math.min(2000, Number(raw.wanderRadius) || 400));
+    const active = !!raw.active;
+    const id = typeof raw.id === 'string' ? raw.id.slice(0, 32) : `a${Date.now()}_${i}`;
+    let customMsgs = [];
+    if (Array.isArray(raw.customMsgs)) {
+      customMsgs = raw.customMsgs
+        .filter(m => typeof m === 'string')
+        .slice(0, 20)
+        .map(m => m.slice(0, 140));
+    }
+    return { id, name, color, personality, speed, chatFreq, wanderRadius, active, customMsgs };
+  }).filter(Boolean);
+  return out;
+}
+
 io.on('connection', (socket) => {
   console.log(`Connect: ${socket.id}`);
 
@@ -118,7 +186,7 @@ io.on('connection', (socket) => {
 
     // Notify others
     socket.broadcast.emit('player-joined', playerData);
-    io.emit('chat', { name: 'System', color: '', text: `${playerData.name} hat die Welt betreten!`, system: true });
+    io.emit('chat', sysMsg('sys.joined', { name: playerData.name }, `${playerData.name} hat die Welt betreten!`));
     console.log(`${playerData.name} joined (${players.size}/${MAX_PLAYERS})`);
   });
 
@@ -138,7 +206,7 @@ io.on('connection', (socket) => {
     const now = Date.now();
     socket._chatTimes = socket._chatTimes.filter(t => now - t < 3000);
     if (socket._chatTimes.length >= 5) {
-      socket.emit('chat', { name: 'System', color: '', text: '⚠️ Bitte nicht spammen (max 5 Nachrichten / 3 Sek).', system: true });
+      socket.emit('chat', sysMsg('sys.rate_limit', {}, '⚠️ Bitte nicht spammen (max 5 Nachrichten / 3 Sek).'));
       return;
     }
     socket._chatTimes.push(now);
@@ -157,7 +225,7 @@ io.on('connection', (socket) => {
   socket.on('start-game', (data) => {
     // Schutz gegen Doppel-Starts: wenn bereits ein Spiel läuft, freundlich ablehnen.
     if (activeGame) {
-      socket.emit('chat', { name: 'System', color: '', text: '⚠️ Es läuft bereits ein Spiel. Bitte warte bis es beendet ist.', system: true });
+      socket.emit('chat', sysMsg('sys.game_running', {}, '⚠️ Es läuft bereits ein Spiel. Bitte warte bis es beendet ist.'));
       return;
     }
     // Input sanity-check (typ + dauer)
@@ -185,7 +253,7 @@ io.on('connection', (socket) => {
       });
       activeGame = null; gameItems = []; abZones = null; raceGoal = null;
       players.forEach(p => p.tagged = false);
-      io.emit('chat', { name: 'System', color: '', text: `Spiel von ${byName} beendet.`, system: true });
+      io.emit('chat', sysMsg('sys.game_stopped_by', { name: byName }, `Spiel von ${byName} beendet.`));
     }
   });
 
@@ -202,7 +270,7 @@ io.on('connection', (socket) => {
       activeGame.scores[socket.id] = (activeGame.scores[socket.id] || 0) + 1;
       io.emit('player-tagged', { taggerId: socket.id, targetId });
       const tagger = players.get(socket.id);
-      io.emit('chat', { name: 'System', color: '', text: `${tagger?.name || '?'} hat ${target.name} gefangen!`, system: true });
+      io.emit('chat', sysMsg('sys.tagged', { tagger: tagger?.name || '?', target: target.name }, `${tagger?.name || '?'} hat ${target.name} gefangen!`));
       // Auto-End: wenn alle Teilnehmer (außer Tagger) gefangen sind.
       // Mid-Game-Joiner zählen nicht — sie sind nicht taggbar.
       const nonTaggers = Array.from(players.values()).filter(p =>
@@ -210,7 +278,7 @@ io.on('connection', (socket) => {
         (!activeGame.participants || activeGame.participants.has(p.id))
       );
       if (nonTaggers.length > 0 && nonTaggers.every(p => p.tagged)) {
-        io.emit('chat', { name: 'System', color: '', text: '🎯 Alle gefangen! Spiel beendet.', system: true });
+        io.emit('chat', sysMsg('sys.all_tagged', {}, '🎯 Alle gefangen! Spiel beendet.'));
         io.emit('game-ended', {
           game: activeGame,
           scores: activeGame.scores,
@@ -268,7 +336,7 @@ io.on('connection', (socket) => {
       const elapsed = Date.now() - activeGame.startTime;
       activeGame.finishers.push({ id: socket.id, time: elapsed });
       const p = players.get(socket.id);
-      io.emit('chat', { name: 'System', color: '', text: `🏁 ${p?.name} hat das Ziel in ${(elapsed / 1000).toFixed(1)}s erreicht!`, system: true });
+      io.emit('chat', sysMsg('sys.race_finished', { name: p?.name || '?', secs: (elapsed / 1000).toFixed(1) }, `🏁 ${p?.name} hat das Ziel in ${(elapsed / 1000).toFixed(1)}s erreicht!`));
       io.emit('race-finisher', { id: socket.id, time: elapsed, name: p?.name });
     }
   });
@@ -278,11 +346,13 @@ io.on('connection', (socket) => {
     agentsEnabled = !agentsEnabled;
     initAgents();
     io.emit('agents-state', { enabled: agentsEnabled, agents: Array.from(agents.values()) });
-    io.emit('chat', { name: 'System', color: '', text: agentsEnabled ? 'Agents aktiviert.' : 'Agents deaktiviert.', system: true });
+    io.emit('chat', sysMsg(agentsEnabled ? 'sys.agents_on' : 'sys.agents_off', {}, agentsEnabled ? 'Agents aktiviert.' : 'Agents deaktiviert.'));
   });
 
   socket.on('update-agent-configs', (configs) => {
-    agentConfigs = configs;
+    const clean = sanitizeAgentConfigs(configs);
+    if (!clean) return;
+    agentConfigs = clean;
     initAgents();
     io.emit('agents-state', { enabled: agentsEnabled, agents: Array.from(agents.values()), configs: agentConfigs });
   });
@@ -291,7 +361,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const p = players.get(socket.id);
     if (p) {
-      io.emit('chat', { name: 'System', color: '', text: `${p.name} hat die Welt verlassen.`, system: true });
+      io.emit('chat', sysMsg('sys.left', { name: p.name }, `${p.name} hat die Welt verlassen.`));
       io.emit('player-left', socket.id);
       players.delete(socket.id);
 
@@ -307,10 +377,15 @@ io.on('connection', (socket) => {
 
         // Tag-Spiel: wenn der Tagger geht, neuen Tagger würfeln (oder Spiel beenden)
         if (activeGame.type === 'tag' && activeGame.tagger === socket.id) {
-          const candidates = Array.from(players.values()).filter(x => !x.tagged);
+          // Nur ursprüngliche Teilnehmer kommen als neuer Tagger in Frage.
+          // Mid-Game-Joiner kennen die Regeln nicht und wären unfair als Fänger.
+          const candidates = Array.from(players.values()).filter(x =>
+            !x.tagged &&
+            (!activeGame.participants || activeGame.participants.has(x.id))
+          );
           if (candidates.length === 0) {
-            // Keine Spieler mehr übrig → Spiel beenden
-            io.emit('chat', { name: 'System', color: '', text: 'Tagger hat verlassen — Spiel beendet.', system: true });
+            // Keine gültigen Kandidaten → Spiel beenden
+            io.emit('chat', sysMsg('sys.tagger_left_ended', {}, 'Tagger hat verlassen — Spiel beendet.'));
             io.emit('game-ended', {
               game: activeGame,
               scores: activeGame.scores,
@@ -322,7 +397,7 @@ io.on('connection', (socket) => {
           } else {
             const newTagger = candidates[Math.floor(Math.random() * candidates.length)];
             activeGame.tagger = newTagger.id;
-            io.emit('chat', { name: 'System', color: '', text: `Tagger hat verlassen — ${newTagger.name} ist jetzt der Fänger!`, system: true });
+            io.emit('chat', sysMsg('sys.tagger_left_new', { name: newTagger.name }, `Tagger hat verlassen — ${newTagger.name} ist jetzt der Fänger!`));
             io.emit('tag-new-tagger', { taggerId: newTagger.id });
           }
         }
@@ -379,7 +454,7 @@ function startGameServer(data) {
   }
 
   io.emit('game-started', { game: activeGame, gameItems, abZones, raceGoal });
-  io.emit('chat', { name: 'System', color: '', text: `🎮 ${data.type.toUpperCase()} gestartet!`, system: true });
+  io.emit('chat', sysMsg('sys.game_started', { type: data.type }, `🎮 ${data.type.toUpperCase()} gestartet!`));
 
   // Auto-end timer
   if (data.type !== 'ab') {
@@ -496,13 +571,18 @@ setInterval(() => {
       a.frame = (a.frame + 1) % 3;
     } else { a.moving = false; a.frame = 0; }
 
-    // Chat
+    // Chat — jede Persönlichkeits-Nachricht liegt bilingual (de/en) vor.
+    // Custom-Msgs sind user-eingegeben und werden als {de: x, en: x} behandelt.
     if (now > a.chatTimer) {
       const pers = PERSONALITIES[cfg.personality] || PERSONALITIES.freundlich;
-      const msgs = [...pers.msgs, ...(cfg.customMsgs || [])];
-      const msg = msgs[Math.floor(Math.random() * msgs.length)];
-      io.emit('agent-speech', { id: a.id, text: msg });
-      io.emit('chat', { name: cfg.name, color: cfg.color, text: msg, system: false, agent: true });
+      const custom = (cfg.customMsgs || []).map(s => ({ de: s, en: s }));
+      const msgs = [...pers.msgs, ...custom];
+      const pick = msgs[Math.floor(Math.random() * msgs.length)];
+      const deText = pick.de || pick.en || '';
+      const enText = pick.en || pick.de || '';
+      // Client-Locale bestimmt, welche Sprache im Chat/Blase angezeigt wird.
+      io.emit('agent-speech', { id: a.id, text: deText, texts: { de: deText, en: enText } });
+      io.emit('chat', { name: cfg.name, color: cfg.color, text: deText, texts: { de: deText, en: enText }, system: false, agent: true });
       a.chatTimer = now + cfg.chatFreq * 1000 + Math.random() * cfg.chatFreq * 500;
     }
   });
@@ -546,7 +626,7 @@ setInterval(() => {
         scores: activeGame.answers,
         abResults: buildABResults(activeGame),
       });
-      io.emit('chat', { name: 'System', color: '', text: '🅰️🅱️ Alle Fragen beantwortet!', system: true });
+      io.emit('chat', sysMsg('sys.ab_all_answered', {}, '🅰️🅱️ Alle Fragen beantwortet!'));
       activeGame = null; abZones = null;
     }
   }
