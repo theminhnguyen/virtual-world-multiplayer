@@ -6,3 +6,4 @@ node_modules/
 *.old-backup
 *.backup
 _check.js
+_extract.js

@@ -223,6 +223,47 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
 .abr-opt .name-chip .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
 .abr-opt .name-chip.you{color:#93c5fd;font-weight:600}
 .abr-noans{color:#6b7280;font-size:10px;margin-top:4px;font-style:italic}
+
+/* ===== BOSS FIGHT UI ===== */
+#boss-hud{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:140;display:none;pointer-events:none;padding:10px 0;width:min(680px,94vw);text-align:center}
+#boss-hud.show{display:block}
+#boss-hp-wrap{background:rgba(10,10,30,.85);border:1px solid rgba(239,68,68,.5);border-radius:10px;padding:6px 12px;backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+#boss-hp-label{font-size:10px;color:#f87171;font-weight:700;letter-spacing:1px;margin-bottom:3px;text-transform:uppercase}
+#boss-hp-bar{position:relative;width:100%;height:14px;background:rgba(0,0,0,.55);border-radius:7px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+#boss-hp-fill{height:100%;width:100%;background:linear-gradient(90deg,#ef4444,#b91c1c);transition:width .18s ease-out;box-shadow:0 0 10px rgba(239,68,68,.7) inset}
+#boss-hp-fill.flash{background:linear-gradient(90deg,#fef3c7,#f97316);transition:none}
+#boss-hp-text{position:absolute;top:0;left:0;right:0;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.7);color:#fff}
+#boss-my-stats{margin-top:6px;display:flex;gap:14px;justify-content:center;font-size:11px}
+.boss-stat{background:rgba(10,10,30,.8);padding:5px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(8px)}
+.boss-stat .lbl{color:#888;font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+.boss-stat .val{color:#fbbf24;font-weight:700;font-size:13px;margin-left:4px}
+.boss-stat .val.spect{color:#94a3b8}
+.boss-stat .val.hearts{color:#f87171}
+#boss-fire-btn{display:none;position:absolute;right:130px;bottom:44px;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fca5a5,#dc2626 70%);border:2px solid rgba(254,202,202,.8);color:#fff;font-size:2em;pointer-events:auto;touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.45),0 0 18px rgba(239,68,68,.35);cursor:pointer;z-index:310}
+#boss-fire-btn.show{display:flex}
+#boss-fire-btn.active{transform:scale(.92);box-shadow:0 2px 8px rgba(0,0,0,.5),0 0 22px rgba(239,68,68,.8)}
+
+/* Damage flash overlay on own hit */
+#dmg-flash{position:fixed;inset:0;z-index:135;pointer-events:none;background:radial-gradient(circle at center,rgba(239,68,68,0) 40%,rgba(239,68,68,.55) 100%);opacity:0;transition:opacity .25s}
+#dmg-flash.show{opacity:1}
+
+/* League-of-Legends style end popup */
+#game-end.boss-end .game-end-box{max-width:560px;padding:44px 40px;border:none;background:linear-gradient(180deg,#0a0a1e 0%,#16162e 100%);box-shadow:0 0 60px rgba(0,0,0,.8),0 0 200px currentColor;position:relative;overflow:hidden}
+#game-end.boss-end.victory .game-end-box{color:rgba(251,191,36,.28);border:2px solid rgba(251,191,36,.55)}
+#game-end.boss-end.defeat .game-end-box{color:rgba(239,68,68,.28);border:2px solid rgba(239,68,68,.55)}
+#game-end.boss-end .game-end-box::before{content:'';position:absolute;inset:-2px;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.07) 50%,transparent 70%);pointer-events:none;animation:sheen 3.5s ease-in-out infinite}
+@keyframes sheen{0%,100%{transform:translateX(-60%)}50%{transform:translateX(60%)}}
+#game-end.boss-end .result{font-size:5em;font-weight:900;letter-spacing:6px;margin:14px 0 6px;animation:bossPulse 1.6s ease-in-out infinite}
+#game-end.boss-end.victory .result{background:linear-gradient(135deg,#fde68a 0%,#f59e0b 50%,#fbbf24 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 40px rgba(251,191,36,.8);filter:drop-shadow(0 0 16px rgba(251,191,36,.7))}
+#game-end.boss-end.defeat .result{background:linear-gradient(135deg,#fca5a5 0%,#dc2626 50%,#ef4444 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 40px rgba(239,68,68,.8);filter:drop-shadow(0 0 16px rgba(239,68,68,.7))}
+@keyframes bossPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+#game-end.boss-end .top-dmg-banner{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;margin:8px auto 14px;font-size:13px;color:#fef3c7;font-weight:600;display:inline-block}
+#game-end.boss-end .top-dmg-banner.me{background:linear-gradient(135deg,rgba(251,191,36,.22),rgba(245,158,11,.22));border-color:rgba(251,191,36,.55);color:#fde68a}
+#game-end.boss-end .sb-row{padding:6px 8px}
+#game-end.boss-end .sb-row.top{background:linear-gradient(90deg,rgba(251,191,36,.18),rgba(251,191,36,.04));border-radius:6px;border:1px solid rgba(251,191,36,.3);margin:2px -4px}
+#game-end.boss-end .sb-row.you{background:rgba(59,130,246,.22);border-radius:6px}
+#game-end.boss-end .sb-row.top.you{background:linear-gradient(90deg,rgba(251,191,36,.3),rgba(59,130,246,.22));border-color:rgba(251,191,36,.55)}
+#game-end.boss-end .dc-tag{color:#6b7280;font-size:10px;margin-left:4px;font-style:italic}
 </style>
 </head>
 <body>
@@ -280,6 +321,18 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
     </div>
   </div>
   <div id="game-hud"><div id="game-title"></div><div id="game-score"></div><div id="game-timer"></div><div id="game-dist"></div><div id="game-msg"></div><div id="game-info"></div><br><button id="stop-game-btn" onclick="stopGameEarly()" data-i18n="btn_stop_game">✕ Spiel beenden</button></div>
+  <div id="boss-hud">
+    <div id="boss-hp-wrap">
+      <div id="boss-hp-label">👹 <span data-i18n="boss_hp">Boss HP</span></div>
+      <div id="boss-hp-bar"><div id="boss-hp-fill"></div><div id="boss-hp-text">0 / 0</div></div>
+    </div>
+    <div id="boss-my-stats">
+      <div class="boss-stat"><span class="lbl" data-i18n="boss_lives_label">Leben</span><span class="val hearts" id="boss-my-lives">❤❤❤</span></div>
+      <div class="boss-stat"><span class="lbl" data-i18n="boss_dmg_label">Schaden</span><span class="val" id="boss-my-dmg">0</span></div>
+    </div>
+  </div>
+  <div id="dmg-flash"></div>
+  <button id="boss-fire-btn" title="Fire">🔥</button>
   <div id="game-scoreboard"><h4 id="sb-title" data-i18n="scoreboard">Punktestand</h4><div id="sb-entries"></div></div>
   <div id="race-arrow"><svg viewBox="0 0 64 64"><defs><filter id="glow"><feGaussianBlur stdDeviation="2"/></filter></defs><polygon points="32,4 52,40 38,40 38,60 26,60 26,40 12,40" fill="#22c55e" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><text x="32" y="34" font-size="16" fill="#fff" text-anchor="middle" font-weight="bold">🏁</text></svg></div>
   <div id="countdown"></div>
@@ -330,6 +383,10 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
       <div class="mg-card" onclick="showMgSetup('race')">
         <h3 data-i18n="mg_race_title">🏁 Wettrennen</h3>
         <p data-i18n="mg_race_desc">Renn von Start nach Ziel! Wer ist am schnellsten?</p>
+      </div>
+      <div class="mg-card" onclick="showMgSetup('boss')">
+        <h3 data-i18n="mg_boss_title">👹 Boss-Kampf</h3>
+        <p data-i18n="mg_boss_desc">Team-up! Feuert Geschosse und besiegt zusammen einen Boss. Hindernisse geben Deckung.</p>
       </div>
     </div>
     <div id="mg-setup-area" style="display:none"></div>
@@ -539,6 +596,32 @@ const I18N = {
     // Server-full modal
     server_full_title:'Server voll', server_full_detail:'Der Server hat die Kapazität erreicht (max 50 Spieler). Versuch es später nochmal.',
     field_A:'Feld A', field_B:'Feld B',
+    // Boss fight
+    mg_boss_title:'👹 Boss-Kampf', mg_boss_desc:'Team-up! Feuert Geschosse und besiegt zusammen einen Boss. Hindernisse geben Deckung.',
+    mg_boss_setup:'👹 Boss-Kampf — Setup',
+    mg_boss_difficulty:'Schwierigkeit',
+    diff_easy:'Einfach (80 HP + 50/Spieler, 5 Leben)',
+    diff_medium:'Mittel (140 HP + 80/Spieler, 4 Leben)',
+    diff_hard:'Schwer (220 HP + 110/Spieler, 3 Leben)',
+    mg_boss_hint:'🎯 Schieße mit <kbd>Leertaste</kbd> oder linker Maustaste! Ziele mit der Maus.',
+    mg_boss_hint_mobile:'🎯 Tippe auf den Feuer-Button zum Schießen! Ziel = deine Laufrichtung.',
+    mg_boss_start:'👹 Boss-Kampf starten!',
+    gt_boss:'👹 BOSS-KAMPF',
+    boss_hp:'❤ Boss HP',
+    boss_lives_label:'Deine Leben',
+    boss_dmg_label:'Dein Schaden',
+    boss_spectator:'👁 Zuschauer',
+    boss_victory:'VICTORY!',
+    boss_defeat:'DEFEAT!',
+    boss_stopped:'Abgebrochen',
+    boss_top_damage:'🏆 Top-Schaden: {name} mit {dmg}',
+    boss_top_damage_me:'🏆 Top-Schaden: DU mit {dmg}!',
+    boss_no_damage:'Keiner hat Schaden gemacht.',
+    boss_return:'Zurück zur Welt in {n}s...',
+    boss_fire:'🔥',
+    'sys.boss_started':'👹 Boss-Kampf ({diff}) gestartet! {hp} HP.',
+    'sys.boss_defeated':'🏆 Boss besiegt! Sieg!',
+    'sys.boss_team_wipe':'💀 Alle gefallen — Niederlage.',
   },
   en: {
     title:'Virtual World', tagline:'Walk around, chat & play minigames with your team',
@@ -620,6 +703,32 @@ const I18N = {
     'sys.cfg_invalid':'Invalid!',
     server_full_title:'Server full', server_full_detail:'The server has reached capacity (max 50 players). Try again later.',
     field_A:'Field A', field_B:'Field B',
+    // Boss fight
+    mg_boss_title:'👹 Boss fight', mg_boss_desc:'Team up! Fire projectiles and defeat a boss together. Obstacles give cover.',
+    mg_boss_setup:'👹 Boss fight — Setup',
+    mg_boss_difficulty:'Difficulty',
+    diff_easy:'Easy (80 HP + 50/player, 5 lives)',
+    diff_medium:'Medium (140 HP + 80/player, 4 lives)',
+    diff_hard:'Hard (220 HP + 110/player, 3 lives)',
+    mg_boss_hint:'🎯 Shoot with <kbd>Space</kbd> or left-click! Aim with the mouse.',
+    mg_boss_hint_mobile:'🎯 Tap the fire button to shoot! Aim = your walk direction.',
+    mg_boss_start:'👹 Start boss fight!',
+    gt_boss:'👹 BOSS FIGHT',
+    boss_hp:'❤ Boss HP',
+    boss_lives_label:'Your lives',
+    boss_dmg_label:'Your damage',
+    boss_spectator:'👁 Spectator',
+    boss_victory:'VICTORY!',
+    boss_defeat:'DEFEAT!',
+    boss_stopped:'Stopped',
+    boss_top_damage:'🏆 Top damage: {name} with {dmg}',
+    boss_top_damage_me:'🏆 Top damage: YOU with {dmg}!',
+    boss_no_damage:'Nobody dealt damage.',
+    boss_return:'Returning to world in {n}s...',
+    boss_fire:'🔥',
+    'sys.boss_started':'👹 Boss fight ({diff}) started! {hp} HP.',
+    'sys.boss_defeated':'🏆 Boss defeated! Victory!',
+    'sys.boss_team_wipe':'💀 Everyone fell — defeat.',
   }
 };
 function t(key, params){
@@ -699,6 +808,18 @@ let gameItems=[]; // for collect game
 let abZones=null; // for A/B game
 let raceGoal=null; // for race
 let worldObjs=[];
+// Boss fight state — vom Server befüllt via boss-update (20Hz).
+// Shape:
+//   arena:{x,y,w,h}, difficulty:'easy'|'medium'|'hard',
+//   obstacles:[{x,y,w,h}],
+//   boss:{x,y,hp,maxHp,flash}, projectiles:[{id,x,y,kind,ownerHint}],
+//   lives:{ [socketId]: {lives,maxLives,alive,spectator,iframes,dmg,name,color,disconnected} },
+//   lastUpdate: ms timestamp for stale-check,
+//   hitFlashUntil: ms — lokaler Rot-Blitz bei eigenem Treffer
+let bossState=null;
+let mousePos={x:0,y:0}; // Client mouse in Canvas-Pixeln (für Aim)
+let bossShootHeld=false; // Space oder Maustaste gehalten
+let lastBossShot=0;
 // Visual polish state
 let grassPattern=null, grassPatternCanvas=null;
 let clouds=[];
@@ -734,6 +855,23 @@ function connectSocket(name,color){
       const b=document.getElementById('agents-quick-toggle');if(b){b.textContent=t(agentsEnabled?'btn_agents_on':'btn_agents_off');b.classList.toggle('agents-off',!agentsEnabled);}}
     // Aktives Spiel sync
     if(d.activeGame){activeGame=d.activeGame;gameItems=d.gameItems||[];abZones=d.abZones;raceGoal=d.raceGoal;document.getElementById('game-hud').classList.add('show');}
+    // Mid-Game-Joiner eines Boss-Fights: Server schickt bossSnapshot damit wir
+    // die Arena als Zuschauer sofort rendern können (wir sind KEIN Teilnehmer,
+    // d.h. wir dürfen nicht schießen und können nicht getroffen werden).
+    if(d.bossSnapshot){
+      bossState={
+        arena:d.bossSnapshot.arena,
+        difficulty:d.bossSnapshot.difficulty,
+        obstacles:d.bossSnapshot.obstacles||[],
+        boss:d.bossSnapshot.boss,
+        projectiles:d.bossSnapshot.projectiles||[],
+        lives:d.bossSnapshot.lives||{},
+        lastUpdate:Date.now(),
+        hitFlashUntil:0,
+        midJoin:true, // Kennzeichnung: wir sind nicht im Teilnehmer-Snapshot
+      };
+      showBossHud();
+    }
   });
   socket.on('player-joined',p=>{addRemotePlayer(p);addChatMsg('System','',t('sys.joined',{name:p.name}),true);});
   socket.on('player-left',id=>{entities=entities.filter(e=>e.remoteId!==id);});
@@ -769,26 +907,102 @@ function connectSocket(name,color){
     const iv=setInterval(()=>{cnt--;if(cnt>0)cd.textContent=cnt;else{cd.textContent='GO!';clearInterval(iv);setTimeout(()=>{
       cd.classList.remove('show');
       // Activate game using server state
-      activeGame={type:g.type,duration:g.duration,elapsed:0,startTime:g.startTime,score:0,simScores:{},arena:g.arena,questions:g.questions,timePerQ:g.timePerQ,currentQ:0,questionTimer:0,finished:false,finishTime:0,tagger:g.tagger};
+      activeGame={type:g.type,duration:g.duration,elapsed:0,startTime:g.startTime,score:0,simScores:{},arena:g.arena,questions:g.questions,timePerQ:g.timePerQ,currentQ:0,questionTimer:0,finished:false,finishTime:0,tagger:g.tagger,difficulty:g.difficulty,obstacles:g.obstacles};
       gameItems=d.gameItems||[];abZones=d.abZones;raceGoal=d.raceGoal;
       const hud=document.getElementById('game-hud');hud.classList.add('show');
-      const titleKey={tag:'gt_tag',collect:'gt_col',race:'gt_race',ab:'gt_ab'}[g.type];
+      const titleKey={tag:'gt_tag',collect:'gt_col',race:'gt_race',ab:'gt_ab',boss:'gt_boss'}[g.type];
       document.getElementById('game-title').textContent=titleKey?t(titleKey):(g.type||'').toUpperCase();
       document.getElementById('game-score').textContent=g.type==='collect'?t('score_col',{n:0}):g.type==='tag'?t('score_tag',{n:0}):g.type==='race'?t('score_race_goto'):'';
       if(g.type==='collect'){
         document.getElementById('game-info').innerHTML=t('info_col_legend');
-        document.getElementById('game-scoreboard').classList.add('show');
-        document.getElementById('sb-title').textContent='⭐ '+t('scoreboard');
+        // Kein Live-Scoreboard während des Spiels — Spannung erhalten, kein Meta-Gaming.
+        // Eigener Score läuft im Top-HUD mit; volles Leaderboard erst im End-Popup.
+        document.getElementById('game-scoreboard').classList.remove('show');
       }
       if(g.type==='race'){
         activeGame.startPos={x:player.x,y:player.y};
         document.getElementById('game-info').innerHTML=t('info_race');
         document.getElementById('race-arrow').classList.add('show');
       }
+      if(g.type==='boss'){
+        // Boss-State initialisieren; Server schickt gleich die ersten
+        // boss-update-Snapshots mit dem echten HP-Wert.
+        bossState={
+          arena:g.arena,
+          difficulty:g.difficulty,
+          obstacles:g.obstacles||[],
+          boss:g.boss?{x:g.boss.x,y:g.boss.y,hp:g.boss.hp,maxHp:g.boss.maxHp,flash:false}:null,
+          projectiles:[],
+          lives:(g.players?Object.fromEntries(Object.entries(g.players).map(([id,s])=>[id,{
+            lives:s.lives,maxLives:s.maxLives,alive:s.alive,spectator:!!s.spectator,
+            iframes:false,dmg:s.damageDealt||0,name:s.name,color:s.color,disconnected:!!s.disconnected,
+          }])):{}),
+          lastUpdate:Date.now(),
+          hitFlashUntil:0,
+          midJoin:false,
+        };
+        // Eigener Spieler ist Teilnehmer wenn in g.players
+        const me=g.players&&g.players[myId];
+        if(!me){bossState.midJoin=true;}
+        showBossHud();
+        // Detail-Info im Standard-HUD: Schwierigkeit + Hinweis
+        const hint=('ontouchstart' in window||navigator.maxTouchPoints>0)?t('mg_boss_hint_mobile'):t('mg_boss_hint');
+        document.getElementById('game-info').innerHTML=hint;
+        document.getElementById('game-scoreboard').classList.remove('show');
+        // Chat-Notiz nur der Initiator-Client muss NICHT zeigen — kommt per sys.game_started
+        const maxHp=g.boss?g.boss.maxHp:0;
+        addChatMsg('System','',t('sys.boss_started',{diff:t('diff_'+(g.difficulty||'medium')).split('(')[0].trim(),hp:maxHp}),true);
+      }
     },600);}},1000);
+  });
+  // Boss fight: 20Hz Snapshot vom Server mit Boss-Pos, Projektilen und Leben-Status
+  socket.on('boss-update',d=>{
+    if(!bossState)return;
+    bossState.boss=d.boss;
+    bossState.projectiles=d.projectiles||[];
+    bossState.lives=d.lives||bossState.lives;
+    bossState.lastUpdate=Date.now();
+    updateBossHud();
+  });
+  // Boss-Hit: ein Spieler-Projektil hat den Boss getroffen (vom Server bestätigt)
+  socket.on('boss-hit',d=>{
+    if(!bossState||!bossState.boss)return;
+    bossState.boss.hp=d.hp;
+    bossState.boss.flash=true;
+    setTimeout(()=>{if(bossState&&bossState.boss)bossState.boss.flash=false;},180);
+    // eigenen Damage hochzählen falls ich der Schütze war
+    if(d.by===myId&&bossState.lives&&bossState.lives[myId]){
+      bossState.lives[myId].dmg=(bossState.lives[myId].dmg||0)+d.dmg;
+      updateBossHud();
+    }
+    // Flash des HP-Bars
+    const fill=document.getElementById('boss-hp-fill');
+    if(fill){fill.classList.add('flash');setTimeout(()=>fill.classList.remove('flash'),120);}
+    triggerShake(.8,100);
+  });
+  // Player-Hit: Boss-Projektil hat einen Spieler getroffen
+  socket.on('player-hit',d=>{
+    if(!bossState)return;
+    const st=bossState.lives&&bossState.lives[d.id];
+    if(st){st.lives=d.lives;st.alive=d.alive;st.spectator=d.spectator;}
+    if(d.id===myId){
+      // Eigener Treffer: rotes Flash-Overlay + Shake
+      bossState.hitFlashUntil=Date.now()+400;
+      const fl=document.getElementById('dmg-flash');
+      fl.classList.add('show');setTimeout(()=>fl.classList.remove('show'),350);
+      triggerShake(3.5,300);
+      updateBossHud();
+    } else {
+      triggerShake(.8,120);
+    }
   });
   socket.on('game-ended',d=>{
     const type=activeGame?.type||d?.game?.type;
+    // Boss-Fight hat eigene Victory/Defeat-Logik, die überschreibt den Standard-Flow.
+    if(type==='boss'){
+      handleBossEnd(d);
+      return;
+    }
     const title=d?.stopped?t('end_stopped_full'):t('end_over');
     let result='🎮',detail=t('end_over'),lb=null,autoClose=0,ab=null;
     if(type==='collect'){
@@ -833,6 +1047,7 @@ function connectSocket(name,color){
       document.getElementById('game-hud').classList.remove('show');
       document.getElementById('game-scoreboard').classList.remove('show');
       document.getElementById('race-arrow').style.display='none';}
+    if(bossState){bossState=null;hideBossHud();}
   });
   // Tag: neuer Tagger wurde gewählt (wenn der ursprüngliche disconnected ist)
   socket.on('tag-new-tagger',d=>{
@@ -942,6 +1157,23 @@ function gameLoop(time){
       if(activeGame?.type==='tag'){
         const a=activeGame.arena;
         player.x=clamp(player.x+dx,a.x,a.x+a.w-16);player.y=clamp(player.y+dy,a.y,a.y+a.h-16);
+      } else if(activeGame?.type==='boss'&&bossState){
+        // Boss-Arena: clamp in Arena + AABB-Stop an Hindernissen.
+        // X und Y getrennt auflösen → "gleiten" an Wänden statt hart stehen bleiben.
+        const a=bossState.arena||activeGame.arena;
+        const obs=bossState.obstacles||[];
+        const sz=16;
+        const canMove=(nx,ny)=>{
+          if(nx<a.x||ny<a.y||nx+sz>a.x+a.w||ny+sz>a.y+a.h)return false;
+          for(const o of obs){
+            if(nx+sz>o.x&&nx<o.x+o.w&&ny+sz>o.y&&ny<o.y+o.h)return false;
+          }
+          return true;
+        };
+        let nx=player.x+dx, ny=player.y;
+        if(canMove(nx,ny))player.x=nx;
+        nx=player.x; ny=player.y+dy;
+        if(canMove(nx,ny))player.y=ny;
       } else {
         player.x=clamp(player.x+dx,10,WORLD_W-26);player.y=clamp(player.y+dy,10,WORLD_H-26);
       }
@@ -1091,7 +1323,8 @@ function updateMinigame(dt){
       }});
       return !simGrabbed;
     });
-    if(changed||!activeGame._sbInit){updateCollectScoreboard();activeGame._sbInit=true;}
+    // Scoreboard-Widget bleibt während des Collect-Spiels bewusst versteckt
+    // (keine Punkte der Anderen mitspiegeln), Reveal erst im End-Popup.
     document.getElementById('game-dist').textContent=t('items_left',{n:gameItems.length});
     // Spawn new items
     if(gameItems.length<8&&Math.random()<.03*dt){
@@ -1135,6 +1368,27 @@ function updateMinigame(dt){
         else addChatMsg('System','',t('sys.local_race',{name:player.name,secs}),true);
       }
     }
+  }
+  else if(activeGame.type==='boss'){
+    // Boss-Fight: Schießen wenn Space oder Maus gehalten wird.
+    // Server rate-limitet (280ms); wir rate-limiten lokal leicht aggressiver um
+    // Netzwerk-Spam zu vermeiden (identische 280ms).
+    if(bossState&&bossShootHeld){
+      const st=bossState.lives?.[myId];
+      const canShoot = st && st.alive && !st.disconnected && !bossState.midJoin;
+      if(canShoot){
+        const now=Date.now();
+        if(now-lastBossShot>=280){
+          lastBossShot=now;
+          const aim=computeAimVector();
+          if(aim && socket && socket.connected){
+            socket.emit('shoot-projectile',{dx:aim.x,dy:aim.y});
+          }
+        }
+      }
+    }
+    // HUD timer macht für Boss keinen Sinn (kein duration) → ausblenden
+    document.getElementById('game-timer').textContent='';
   }
   else if(activeGame.type==='ab'){
     // Antwort an Server senden (MP), sobald Spieler auf Zone steht
@@ -1290,6 +1544,26 @@ function stopGameEarly(){
   else if(type==='race')endGame(t('end_stopped'),activeGame.finished?'🏁 '+(activeGame.finishTime/1000).toFixed(1)+'s':t('end_race_not'),t('end_early_detail'));
 }
 
+// Aim-Vector für Boss-Schuss bestimmen. Desktop: Richtung zum Mauszeiger.
+// Mobile / kein Mouse-Tracking: Richtung in die der Spieler zuletzt geschaut hat.
+function computeAimVector(){
+  if(!player)return null;
+  // mousePos ist in Screen-Pixeln (clientX/Y). Wir rechnen sie in Welt-Koord um.
+  const canv=document.getElementById('world-canvas');
+  if(canv&&mousePos.x!=null&&(mousePos.x!==0||mousePos.y!==0)){
+    const rect=canv.getBoundingClientRect();
+    const worldX=(mousePos.x-rect.left)/SCALE+camX;
+    const worldY=(mousePos.y-rect.top)/SCALE+camY;
+    const dx=worldX-(player.x+8), dy=worldY-(player.y+8);
+    const m=Math.sqrt(dx*dx+dy*dy);
+    if(m>0.1)return{x:dx/m,y:dy/m};
+  }
+  // Fallback: Blickrichtung (dir: 0=down,1=left,2=right,3=up)
+  const dirVec=[[0,1],[-1,0],[1,0],[0,-1]];
+  const v=dirVec[player.dir||0];
+  return{x:v[0],y:v[1]};
+}
+
 // ===================== MINIGAME MENU =====================
 function openMinigameMenu(){document.getElementById('minigame-overlay').classList.add('open');document.getElementById('mg-menu').style.display='';document.getElementById('mg-setup-area').style.display='none';}
 function closeMinigameMenu(){document.getElementById('minigame-overlay').classList.remove('open');}
@@ -1331,6 +1605,19 @@ function showMgSetup(type){
         <select id="mg-race-dist"><option value="short">${E(t('dist_short'))}</option><option value="medium" selected>${E(t('dist_medium'))}</option><option value="long">${E(t('dist_long'))}</option></select>
         <p style="font-size:10px;color:#888;margin-top:6px">${E(t('mg_race_hint'))}</p>
         <button class="mg-start" onclick="startRaceGame()">${E(t('mg_race_start'))}</button>
+      </div>`;
+  } else if(type==='boss'){
+    const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+    area.innerHTML=`<h3>${E(t('mg_boss_setup'))}</h3>
+      <div class="mg-setup">
+        <label>${E(t('mg_boss_difficulty'))}</label>
+        <select id="mg-boss-diff">
+          <option value="easy">${E(t('diff_easy'))}</option>
+          <option value="medium" selected>${E(t('diff_medium'))}</option>
+          <option value="hard">${E(t('diff_hard'))}</option>
+        </select>
+        <p style="font-size:11px;color:#888;margin-top:6px">${isTouch?t('mg_boss_hint_mobile'):t('mg_boss_hint')}</p>
+        <button class="mg-start" onclick="startBossGame()">${E(t('mg_boss_start'))}</button>
       </div>`;
   }
 }
@@ -1377,8 +1664,8 @@ function startCollectGame(){
     document.getElementById('game-title').textContent=t('gt_col');
     document.getElementById('game-score').textContent=t('score_col',{n:0});
     document.getElementById('game-info').innerHTML=t('info_col_legend_short');
-    document.getElementById('game-scoreboard').classList.add('show');
-    document.getElementById('sb-title').textContent='⭐ '+t('scoreboard');
+    // Kein Live-Scoreboard — Score nur im Top-HUD und im End-Popup
+    document.getElementById('game-scoreboard').classList.remove('show');
   });
 }
 
@@ -1409,6 +1696,159 @@ function showNextABQuestion(){
   document.getElementById('game-title').innerHTML=t('q_of',{i:activeGame.currentQ+1,n:activeGame.questions.length});
   showGameMsg(t('ab_hint',{a:q.a,b:q.b}));
   addChatMsg('System','',t('sys.ab_question',{q:q.q,a:q.a,b:q.b}),true);
+}
+
+function startBossGame(){
+  // Boss-Fight ist rein Multiplayer — ohne Server kein Mehrspieler-Kampf,
+  // ohne Server keine Authority für Projektil-Physik. Wir lehnen SP freundlich ab.
+  if(!(socket&&socket.connected)){
+    alert(LANG==='en'
+      ?'Boss fight requires a server connection.'
+      :'Boss-Kampf braucht eine Server-Verbindung.');
+    return;
+  }
+  const diffEl=document.getElementById('mg-boss-diff');
+  const difficulty=(diffEl&&['easy','medium','hard'].includes(diffEl.value))?diffEl.value:'medium';
+  // duration=0 → Server setzt seinen eigenen 15min hard-cap
+  socket.emit('start-game',{type:'boss',duration:0,difficulty,startTime:Date.now()});
+  closeMinigameMenu();
+}
+
+function showBossHud(){
+  const el=document.getElementById('boss-hud');if(el)el.classList.add('show');
+  const st=bossState?.lives?.[myId];
+  // Fire-Button nur für aktive Teilnehmer (nicht Spectator, nicht Mid-Joiner)
+  const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+  const canShoot = st && st.alive && !st.disconnected;
+  const fb=document.getElementById('boss-fire-btn');
+  if(fb){if(isTouch&&canShoot)fb.classList.add('show');else fb.classList.remove('show');}
+  updateBossHud();
+}
+function hideBossHud(){
+  const el=document.getElementById('boss-hud');if(el)el.classList.remove('show');
+  const fb=document.getElementById('boss-fire-btn');if(fb)fb.classList.remove('show');
+}
+function updateBossHud(){
+  if(!bossState||!bossState.boss)return;
+  const hpFill=document.getElementById('boss-hp-fill');
+  const hpText=document.getElementById('boss-hp-text');
+  const hp=Math.max(0,bossState.boss.hp|0);
+  const max=Math.max(1,bossState.boss.maxHp|0);
+  if(hpFill)hpFill.style.width=(100*hp/max)+'%';
+  if(hpText)hpText.textContent=hp+' / '+max;
+  const myLiv=document.getElementById('boss-my-lives');
+  const myDmg=document.getElementById('boss-my-dmg');
+  const st=bossState.lives?.[myId];
+  if(st){
+    if(myLiv){
+      if(st.spectator||!st.alive){
+        myLiv.textContent=t('boss_spectator');myLiv.classList.add('spect');myLiv.classList.remove('hearts');
+      } else {
+        myLiv.textContent='❤'.repeat(Math.max(0,st.lives))+'♡'.repeat(Math.max(0,st.maxLives-st.lives));
+        myLiv.classList.add('hearts');myLiv.classList.remove('spect');
+      }
+    }
+    if(myDmg)myDmg.textContent=String(st.dmg||0);
+  } else if(bossState.midJoin){
+    if(myLiv){myLiv.textContent=t('boss_spectator');myLiv.classList.add('spect');}
+    if(myDmg)myDmg.textContent='—';
+  }
+  // Fire-Button Sichtbarkeit dynamisch halten (wenn man stirbt, weg damit)
+  const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+  const canShoot = st && st.alive && !st.disconnected;
+  const fb=document.getElementById('boss-fire-btn');
+  if(fb){if(isTouch&&canShoot)fb.classList.add('show');else fb.classList.remove('show');}
+}
+
+// Spezielles End-Popup für Boss-Fight: LoL-Style Victory/Defeat + Damage-Leaderboard.
+// `d` ist die game-ended Payload mit {outcome, topDamage, damageBoard|leaderboard}.
+function handleBossEnd(d){
+  // Aufräumen wie bei endGame(), aber mit Boss-HUD
+  activeGame=null;gameItems=[];abZones=null;raceGoal=null;
+  hideBossHud();
+  document.getElementById('game-hud').classList.remove('show');
+  document.getElementById('game-scoreboard').classList.remove('show');
+  document.getElementById('race-arrow').style.display='none';
+  document.getElementById('game-dist').textContent='';
+  document.getElementById('game-info').innerHTML='';
+
+  const outcome=d?.outcome||(d?.stopped?'stopped':'defeat');
+  const end=document.getElementById('game-end');
+  // LoL-Styling auf Popup legen
+  end.classList.add('boss-end');
+  end.classList.remove('victory','defeat');
+  if(outcome==='victory')end.classList.add('victory');
+  else if(outcome==='defeat')end.classList.add('defeat');
+  // Bei 'stopped' nutzen wir ein dezenteres Defeat-Rot
+  else end.classList.add('defeat');
+
+  const titleKey=outcome==='victory'?'end_over':outcome==='stopped'?'end_stopped_full':'end_over';
+  document.getElementById('end-title').textContent=t(titleKey);
+  const resultKey=outcome==='victory'?'boss_victory':outcome==='stopped'?'boss_stopped':'boss_defeat';
+  document.getElementById('end-result').textContent=t(resultKey);
+
+  // Top-Damage-Banner
+  const board=Array.isArray(d?.damageBoard)?d.damageBoard:(Array.isArray(d?.leaderboard)?d.leaderboard:[]);
+  const top=d?.topDamage||board[0]||null;
+  const detailEl=document.getElementById('end-detail');
+  detailEl.innerHTML='';
+  if(top&&(top.damage>0||top.score>0)){
+    const iAmTop=top.id===myId;
+    const dmg=top.damage??top.score??0;
+    const name=iAmTop?(LANG==='en'?'YOU':'DU'):(top.name||'?');
+    const bannerText=iAmTop?t('boss_top_damage_me',{dmg}):t('boss_top_damage',{name,dmg});
+    const banner=document.createElement('div');
+    banner.className='top-dmg-banner'+(iAmTop?' me':'');
+    banner.textContent=bannerText;
+    detailEl.appendChild(banner);
+  } else {
+    detailEl.textContent=t('boss_no_damage');
+  }
+
+  // Damage-Leaderboard: Top markiert, Du markiert, Disconnected taggen
+  const lbEl=document.getElementById('end-leaderboard');
+  if(board.length){
+    const youS=t('you_suffix');
+    const topId=top?top.id:null;
+    const html=board.map((r,i)=>{
+      const isYou=r.id===myId;
+      const isTop=r.id===topId&&i===0;
+      const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':('#'+(i+1));
+      const dc=r.disconnected?'<span class="dc-tag">'+(LANG==='en'?'(left)':'(weg)')+'</span>':'';
+      const classes=['sb-row',isYou?'you':'',isTop?'top':''].filter(Boolean).join(' ');
+      const dmg=r.damage??r.score??0;
+      return `<div class="${classes}"><span class="sb-name"><span class="sb-medal">${medal}</span><span class="sb-dot" style="background:${escHtml(r.color||'#888')}"></span>${escHtml(r.name||'?')}${isYou?escHtml(youS):''}${dc}</span><span class="sb-score">${escHtml(dmg)}</span></div>`;
+    }).join('');
+    lbEl.innerHTML=html;lbEl.classList.add('show');
+  } else {lbEl.innerHTML='';lbEl.classList.remove('show');}
+
+  // A/B-Ergebnisse leeren (gehört nicht zu Boss)
+  const abEl=document.getElementById('end-ab-results');abEl.innerHTML='';abEl.classList.remove('show');
+
+  end.classList.add('show');
+  entities.forEach(e=>e.tagged=false);
+
+  // Auto-Close nach 8s — "Danach direkt wieder zurück zur Welt" (User-Wunsch)
+  if(endAutoCloseTimer){clearTimeout(endAutoCloseTimer);endAutoCloseTimer=null;}
+  const cd=document.getElementById('end-countdown');
+  const bar=document.getElementById('end-countdown-bar');
+  cd.classList.add('show');
+  bar.classList.remove('run');bar.style.transition='none';bar.style.transform='scaleX(1)';
+  const autoMs=8000;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    bar.style.transition=`transform ${autoMs}ms linear`;
+    bar.style.transform='scaleX(0)';
+  }));
+  endAutoCloseTimer=setTimeout(()=>{
+    // Boss-State räumen + Popup-Style zurücknehmen, damit nächstes Spiel clean rendert
+    bossState=null;
+    end.classList.remove('boss-end','victory','defeat');
+    closeGameEnd();
+  },autoMs);
+
+  // Chat-Nachricht
+  if(outcome==='victory')addChatMsg('System','',t('sys.boss_defeated'),true);
+  else if(outcome==='defeat')addChatMsg('System','',t('sys.boss_team_wipe'),true);
 }
 
 function startRaceGame(){
@@ -1662,6 +2102,58 @@ function render(){
     ctx.font='bold 6px sans-serif';ctx.fillStyle='#22c55e';ctx.fillText(t('goal_label'),gx,raceGoal.y-6);
   }
 
+  // === BOSS FIGHT OVERLAYS ===
+  if(bossState){
+    const a=bossState.arena;
+    if(a){
+      // Arena floor — dunkel + subtiler Gitter-Overlay für Arenakontrast
+      ctx.fillStyle='rgba(20,10,25,.65)';ctx.fillRect(a.x,a.y,a.w,a.h);
+      // Gitter
+      ctx.strokeStyle='rgba(120,60,140,.08)';ctx.lineWidth=.4;
+      for(let x=a.x;x<a.x+a.w;x+=40){ctx.beginPath();ctx.moveTo(x,a.y);ctx.lineTo(x,a.y+a.h);ctx.stroke();}
+      for(let y=a.y;y<a.y+a.h;y+=40){ctx.beginPath();ctx.moveTo(a.x,y);ctx.lineTo(a.x+a.w,y);ctx.stroke();}
+      // Arena-Rand (rot, gestrichelt)
+      ctx.strokeStyle='rgba(239,68,68,.8)';ctx.lineWidth=2.5;ctx.setLineDash([8,5]);
+      ctx.strokeRect(a.x,a.y,a.w,a.h);ctx.setLineDash([]);
+    }
+    // Hindernisse
+    (bossState.obstacles||[]).forEach(o=>{
+      // Schatten
+      ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(o.x+2,o.y+o.h-1,o.w,3);
+      // Stein-Body
+      ctx.fillStyle='#3a3a4a';ctx.fillRect(o.x,o.y,o.w,o.h);
+      ctx.fillStyle='#4a4a5c';ctx.fillRect(o.x+2,o.y+2,o.w-4,o.h-4);
+      ctx.fillStyle='#5a5a6e';ctx.fillRect(o.x+3,o.y+3,o.w-8,Math.max(3,o.h/4));
+      // Textur-Punkte
+      ctx.fillStyle='#2a2a38';
+      for(let i=0;i<Math.max(2,Math.floor(o.w*o.h/400));i++){
+        const px=o.x+2+((i*37)%(o.w-4));
+        const py=o.y+4+((i*19)%(o.h-6));
+        ctx.fillRect(px,py,1,1);
+      }
+    });
+    // Boss sprite
+    if(bossState.boss){
+      drawBoss(bossState.boss);
+    }
+    // Projektile
+    (bossState.projectiles||[]).forEach(pr=>{
+      if(pr.kind==='player'){
+        // Gelb-orange Plasma-Ball
+        const glow=ctx.createRadialGradient(pr.x,pr.y,0,pr.x,pr.y,7);
+        glow.addColorStop(0,'rgba(253,224,71,.95)');glow.addColorStop(.5,'rgba(245,158,11,.6)');glow.addColorStop(1,'rgba(245,158,11,0)');
+        ctx.fillStyle=glow;ctx.beginPath();ctx.arc(pr.x,pr.y,7,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fff7cc';ctx.beginPath();ctx.arc(pr.x,pr.y,2,0,Math.PI*2);ctx.fill();
+      } else {
+        // Rot-violettes Boss-Geschoss
+        const glow=ctx.createRadialGradient(pr.x,pr.y,0,pr.x,pr.y,8);
+        glow.addColorStop(0,'rgba(244,114,182,.95)');glow.addColorStop(.5,'rgba(217,70,239,.65)');glow.addColorStop(1,'rgba(217,70,239,0)');
+        ctx.fillStyle=glow;ctx.beginPath();ctx.arc(pr.x,pr.y,8,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fbcfe8';ctx.beginPath();ctx.arc(pr.x,pr.y,2.5,0,Math.PI*2);ctx.fill();
+      }
+    });
+  }
+
   // Particles under entities (above ground)
   drawParticles();
 
@@ -1695,6 +2187,87 @@ function render(){
 }
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.fill();}
 function wrapText(ctx,text,maxW){const words=text.split(' ');const lines=[];let line='';words.forEach(w=>{const test=line?line+' '+w:w;if(ctx.measureText(test).width>maxW&&line){lines.push(line);line=w;}else line=test;});if(line)lines.push(line);return lines;}
+
+// ===================== BOSS SPRITE =====================
+function drawBoss(boss){
+  if(!boss) return;
+  const bx=boss.x, by=boss.y;
+  const t=Date.now();
+  const bob=Math.sin(t/320)*1.5; // schwebender Boss
+  const cy=by+bob;
+  // Blut-Schatten darunter (größer, rot)
+  ctx.fillStyle='rgba(120,0,10,.5)';
+  ctx.beginPath();ctx.ellipse(bx,by+22,18,4,0,0,Math.PI*2);ctx.fill();
+  // HP-Ratio für Farb-Verschiebung (gesünder=violett, schwächer=rot-glühend)
+  const hpRatio=boss.maxHp?Math.max(0,boss.hp/boss.maxHp):1;
+  const lowHp=hpRatio<.35;
+  // Aura (pulsierend)
+  const pulse=0.8+Math.sin(t/180)*0.2;
+  const auraR=26*pulse;
+  const aura=ctx.createRadialGradient(bx,cy+4,0,bx,cy+4,auraR);
+  if(lowHp){aura.addColorStop(0,'rgba(239,68,68,.45)');aura.addColorStop(1,'rgba(239,68,68,0)');}
+  else{aura.addColorStop(0,'rgba(168,85,247,.38)');aura.addColorStop(1,'rgba(168,85,247,0)');}
+  ctx.fillStyle=aura;ctx.beginPath();ctx.arc(bx,cy+4,auraR,0,Math.PI*2);ctx.fill();
+  // Körper (großer Rumpf, Gradient von violett/dunkel zu rot wenn wenig HP)
+  const body=ctx.createLinearGradient(bx,cy-16,bx,cy+22);
+  if(lowHp){body.addColorStop(0,'#ef4444');body.addColorStop(.5,'#991b1b');body.addColorStop(1,'#450a0a');}
+  else{body.addColorStop(0,'#7c3aed');body.addColorStop(.5,'#5b21b6');body.addColorStop(1,'#2e1065');}
+  ctx.fillStyle=body;
+  // Unterkörper (eher dreieckig/Umhang)
+  ctx.beginPath();
+  ctx.moveTo(bx-20,cy+22);ctx.lineTo(bx-14,cy-2);ctx.lineTo(bx-10,cy-14);
+  ctx.lineTo(bx+10,cy-14);ctx.lineTo(bx+14,cy-2);ctx.lineTo(bx+20,cy+22);
+  ctx.closePath();ctx.fill();
+  // Brustpanzer (etwas heller)
+  ctx.fillStyle=lowHp?'#dc2626':'#6d28d9';
+  ctx.fillRect(bx-8,cy-6,16,12);
+  ctx.fillStyle=lowHp?'#991b1b':'#4c1d95';
+  ctx.fillRect(bx-6,cy-4,12,2);ctx.fillRect(bx-6,cy+1,12,2);
+  // Kopf
+  ctx.fillStyle=lowHp?'#b91c1c':'#4c1d95';
+  ctx.fillRect(bx-9,cy-16,18,9);
+  ctx.fillStyle=lowHp?'#dc2626':'#6d28d9';
+  ctx.fillRect(bx-8,cy-15,16,7);
+  // Hörner (links+rechts, spitz)
+  ctx.fillStyle='#1c1917';
+  ctx.beginPath();ctx.moveTo(bx-9,cy-16);ctx.lineTo(bx-13,cy-22);ctx.lineTo(bx-7,cy-17);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(bx+9,cy-16);ctx.lineTo(bx+13,cy-22);ctx.lineTo(bx+7,cy-17);ctx.closePath();ctx.fill();
+  // Augen (glühend)
+  const eyeGlow=0.7+Math.sin(t/140)*0.3;
+  ctx.fillStyle=`rgba(253,224,71,${eyeGlow})`;
+  ctx.fillRect(bx-5,cy-12,3,2);
+  ctx.fillRect(bx+2,cy-12,3,2);
+  // Augenkern
+  ctx.fillStyle='#fff7cc';
+  ctx.fillRect(bx-4,cy-12,1,1);
+  ctx.fillRect(bx+3,cy-12,1,1);
+  // Mund (Reißzähne)
+  ctx.fillStyle='#0a0a0a';
+  ctx.fillRect(bx-5,cy-8,10,2);
+  ctx.fillStyle='#fff';
+  ctx.fillRect(bx-4,cy-8,1,2);
+  ctx.fillRect(bx-1,cy-8,1,2);
+  ctx.fillRect(bx+2,cy-8,1,2);
+  // Arme/Krallen
+  ctx.fillStyle=lowHp?'#991b1b':'#5b21b6';
+  ctx.fillRect(bx-16,cy-4,4,10);
+  ctx.fillRect(bx+12,cy-4,4,10);
+  // Krallen (Spitzen)
+  ctx.fillStyle='#1c1917';
+  ctx.fillRect(bx-16,cy+6,2,2);ctx.fillRect(bx-14,cy+6,2,2);
+  ctx.fillRect(bx+14,cy+6,2,2);ctx.fillRect(bx+12,cy+6,2,2);
+  // Flash-Overlay (weiß/rot, bei Treffer)
+  if(boss.flash){
+    ctx.globalCompositeOperation='lighter';
+    ctx.fillStyle='rgba(255,255,255,.7)';
+    ctx.beginPath();
+    ctx.moveTo(bx-20,cy+22);ctx.lineTo(bx-14,cy-2);ctx.lineTo(bx-10,cy-14);
+    ctx.lineTo(bx+10,cy-14);ctx.lineTo(bx+14,cy-2);ctx.lineTo(bx+20,cy+22);
+    ctx.closePath();ctx.fill();
+    ctx.fillRect(bx-9,cy-16,18,9);
+    ctx.globalCompositeOperation='source-over';
+  }
+}
 
 // ===================== HUD =====================
 function updateHUD(){document.getElementById('hud-pos').textContent=`${Math.round(player.x)}, ${Math.round(player.y)}`;document.getElementById('hud-online').textContent=t('online')+`: ${entities.length}`;}
@@ -1789,8 +2362,28 @@ document.addEventListener('keydown',e=>{
   if(e.code==='KeyM'&&gameStarted&&!chatFocused&&!configOpen)openMinigameMenu();
   if(e.code==='KeyQ'&&gameStarted&&!chatFocused&&!configOpen&&activeGame)stopGameEarly();
   if(e.code==='KeyG'&&gameStarted&&!chatFocused&&!configOpen){quickToggleAgents();e.preventDefault();}
+  // Boss-Fight: Leertaste = Feuern (während Chat-Fokus NICHT; sonst schreibt Space ein Leerzeichen)
+  if(e.code==='Space'&&gameStarted&&!chatFocused&&!configOpen&&activeGame?.type==='boss'){
+    bossShootHeld=true;
+    e.preventDefault();
+  }
 });
-document.addEventListener('keyup',e=>{keys[e.code]=false;});
+document.addEventListener('keyup',e=>{
+  keys[e.code]=false;
+  if(e.code==='Space')bossShootHeld=false;
+});
+// Mouse-Aim + Klick für Boss-Fight
+document.addEventListener('mousemove',e=>{mousePos.x=e.clientX;mousePos.y=e.clientY;});
+document.addEventListener('mousedown',e=>{
+  if(e.button!==0)return; // nur Links
+  if(!activeGame||activeGame.type!=='boss')return;
+  // Ignoriere Klicks auf UI-Elemente (Buttons, Panels) — nur Canvas-Klicks zählen
+  const tag=(e.target&&e.target.tagName||'').toLowerCase();
+  if(tag==='button'||tag==='input'||tag==='textarea'||tag==='select'||tag==='label')return;
+  if(e.target&&e.target.closest&&e.target.closest('#chat-panel, #minigame-overlay, #config-overlay, #game-end, .top-btns, #online-list'))return;
+  bossShootHeld=true;
+});
+document.addEventListener('mouseup',e=>{if(e.button===0)bossShootHeld=false;});
 document.getElementById('chat-input').addEventListener('focus',()=>{chatFocused=true;});
 document.getElementById('chat-input').addEventListener('blur',()=>{chatFocused=false;});
 
@@ -1878,6 +2471,16 @@ document.getElementById('chat-input').addEventListener('blur',()=>{chatFocused=f
     if(activeGame)stopBtn.classList.add('show');
     else stopBtn.classList.remove('show');
   },500);
+
+  // Mobile Fire-Button für Boss-Fight. Hold-to-fire (wie Maustaste).
+  const fireBtn=document.getElementById('boss-fire-btn');
+  if(fireBtn){
+    const fireDown=e=>{bossShootHeld=true;fireBtn.classList.add('active');e.preventDefault();};
+    const fireUp=e=>{bossShootHeld=false;fireBtn.classList.remove('active');e.preventDefault();};
+    fireBtn.addEventListener('touchstart',fireDown,{passive:false});
+    fireBtn.addEventListener('touchend',fireUp,{passive:false});
+    fireBtn.addEventListener('touchcancel',fireUp,{passive:false});
+  }
 
   // Prevent accidental scrolling/pull-to-refresh on the canvas itself
   const canv=document.getElementById('world-canvas');
