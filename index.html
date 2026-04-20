@@ -1519,7 +1519,11 @@ function endGame(title,result,detail,leaderboard,autoCloseMs,abResults){
   } else {cd.classList.remove('show');}
 }
 function closeGameEnd(){
-  document.getElementById('game-end').classList.remove('show');
+  const end=document.getElementById('game-end');
+  end.classList.remove('show');
+  // Boss-spezifische Popup-Klassen immer mit-entfernen, damit ein
+  // nachfolgendes Spiel kein gold/rot-Styling erbt.
+  end.classList.remove('boss-end','victory','defeat');
   document.getElementById('end-countdown').classList.remove('show');
   if(endAutoCloseTimer){clearTimeout(endAutoCloseTimer);endAutoCloseTimer=null;}
 }
@@ -1764,7 +1768,9 @@ function updateBossHud(){
 // `d` ist die game-ended Payload mit {outcome, topDamage, damageBoard|leaderboard}.
 function handleBossEnd(d){
   // Aufräumen wie bei endGame(), aber mit Boss-HUD
-  activeGame=null;gameItems=[];abZones=null;raceGoal=null;
+  // bossState SOFORT nullen: Arena, Hindernisse und Boss sollen nicht länger
+  // im Hintergrund weitergerendert werden während das Popup zu sehen ist.
+  activeGame=null;gameItems=[];abZones=null;raceGoal=null;bossState=null;
   hideBossHud();
   document.getElementById('game-hud').classList.remove('show');
   document.getElementById('game-scoreboard').classList.remove('show');
@@ -1840,8 +1846,8 @@ function handleBossEnd(d){
     bar.style.transform='scaleX(0)';
   }));
   endAutoCloseTimer=setTimeout(()=>{
-    // Boss-State räumen + Popup-Style zurücknehmen, damit nächstes Spiel clean rendert
-    bossState=null;
+    // Popup-Style zurücknehmen, damit nächstes Spiel clean rendert
+    // (bossState wurde schon oben sofort genullt).
     end.classList.remove('boss-end','victory','defeat');
     closeGameEnd();
   },autoMs);
