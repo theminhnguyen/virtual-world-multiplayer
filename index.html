@@ -251,6 +251,8 @@ kbd{background:rgba(255,255,255,.1);padding:1px 4px;border-radius:3px;font-famil
 #game-end.boss-end .game-end-box{max-width:560px;padding:44px 40px;border:none;background:linear-gradient(180deg,#0a0a1e 0%,#16162e 100%);box-shadow:0 0 60px rgba(0,0,0,.8),0 0 200px currentColor;position:relative;overflow:hidden}
 #game-end.boss-end.victory .game-end-box{color:rgba(251,191,36,.28);border:2px solid rgba(251,191,36,.55)}
 #game-end.boss-end.defeat .game-end-box{color:rgba(239,68,68,.28);border:2px solid rgba(239,68,68,.55)}
+#game-end.boss-end.stopped .game-end-box{color:rgba(148,163,184,.22);border:2px solid rgba(148,163,184,.45)}
+#game-end.boss-end.stopped .result{background:linear-gradient(135deg,#cbd5e1 0%,#64748b 50%,#94a3b8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 30px rgba(148,163,184,.6);filter:drop-shadow(0 0 12px rgba(148,163,184,.5))}
 #game-end.boss-end .game-end-box::before{content:'';position:absolute;inset:-2px;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.07) 50%,transparent 70%);pointer-events:none;animation:sheen 3.5s ease-in-out infinite}
 @keyframes sheen{0%,100%{transform:translateX(-60%)}50%{transform:translateX(60%)}}
 #game-end.boss-end .result{font-size:5em;font-weight:900;letter-spacing:6px;margin:14px 0 6px;animation:bossPulse 1.6s ease-in-out infinite}
@@ -1440,18 +1442,9 @@ function updateMinigame(dt){
 }
 
 function isInZone(entity,zone){return entity.x>=zone.x&&entity.x<=zone.x+zone.w&&entity.y>=zone.y&&entity.y<=zone.y+zone.h;}
-function updateCollectScoreboard(){
-  if(!activeGame||activeGame.type!=='collect')return;
-  const rows=[{name:player.name,color:player.color,score:activeGame.score||0,you:true}];
-  const sims=activeGame.simScores||{};
-  entities.filter(e=>e.isSimPlayer).forEach(e=>rows.push({name:e.name,color:e.color,score:sims[e.name]||0,you:false}));
-  // Remote players: wir kennen ihre Scores nicht lokal (Server tracked) — zeigen 0 oder aus activeGame.scores falls vom Server
-  entities.filter(e=>e.isRemotePlayer).forEach(e=>{const s=(activeGame.scores&&activeGame.scores[e.remoteId])||0;rows.push({name:e.name,color:e.color,score:s,you:false});});
-  rows.sort((a,b)=>b.score-a.score);
-  const youS=t('you_suffix');
-  const html=rows.map((r,i)=>{const medal=i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':'';return `<div class="sb-row${r.you?' you':''}"><span class="sb-name"><span class="sb-dot" style="background:${escHtml(r.color)}"></span>${medal}${escHtml(r.name)}${r.you?escHtml(youS):''}</span><span class="sb-score">${escHtml(r.score)}</span></div>`;}).join('');
-  document.getElementById('sb-entries').innerHTML=html||'<div style="color:#666;font-size:10px">'+escHtml(t('sb_empty'))+'</div>';
-}
+// Hinweis: Das Live-Scoreboard für Collect wurde bewusst entfernt — während
+// der Runde sollen die Scores der Anderen nicht sichtbar sein (Anti-Meta-Gaming).
+// Das volle Ranking kommt erst im End-Popup via buildLeaderboardRows().
 function showGameMsg(msg){const el=document.getElementById('game-msg');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3000);}
 let endAutoCloseTimer=null;
 // Baut eine Leaderboard-Liste aus der `game-ended`-Payload. Bevorzugt die vom
@@ -1522,8 +1515,8 @@ function closeGameEnd(){
   const end=document.getElementById('game-end');
   end.classList.remove('show');
   // Boss-spezifische Popup-Klassen immer mit-entfernen, damit ein
-  // nachfolgendes Spiel kein gold/rot-Styling erbt.
-  end.classList.remove('boss-end','victory','defeat');
+  // nachfolgendes Spiel kein gold/rot/grau-Styling erbt.
+  end.classList.remove('boss-end','victory','defeat','stopped');
   document.getElementById('end-countdown').classList.remove('show');
   if(endAutoCloseTimer){clearTimeout(endAutoCloseTimer);endAutoCloseTimer=null;}
 }
@@ -1782,11 +1775,10 @@ function handleBossEnd(d){
   const end=document.getElementById('game-end');
   // LoL-Styling auf Popup legen
   end.classList.add('boss-end');
-  end.classList.remove('victory','defeat');
+  end.classList.remove('victory','defeat','stopped');
   if(outcome==='victory')end.classList.add('victory');
   else if(outcome==='defeat')end.classList.add('defeat');
-  // Bei 'stopped' nutzen wir ein dezenteres Defeat-Rot
-  else end.classList.add('defeat');
+  else end.classList.add('stopped'); // dezenteres Grau bei manuellem Abbruch
 
   const titleKey=outcome==='victory'?'end_over':outcome==='stopped'?'end_stopped_full':'end_over';
   document.getElementById('end-title').textContent=t(titleKey);
@@ -1848,7 +1840,7 @@ function handleBossEnd(d){
   endAutoCloseTimer=setTimeout(()=>{
     // Popup-Style zurücknehmen, damit nächstes Spiel clean rendert
     // (bossState wurde schon oben sofort genullt).
-    end.classList.remove('boss-end','victory','defeat');
+    end.classList.remove('boss-end','victory','defeat','stopped');
     closeGameEnd();
   },autoMs);
 

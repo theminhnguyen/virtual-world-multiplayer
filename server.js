@@ -295,6 +295,12 @@ io.on('connection', (socket) => {
     if (activeGame) {
       const stopper = players.get(socket.id);
       const byName = stopper ? stopper.name : 'Jemand';
+      // Boss-Fight: eigener End-Flow (damageBoard, outcome:'stopped', tickHandle-Cleanup).
+      if (activeGame.type === 'boss') {
+        io.emit('chat', sysMsg('sys.game_stopped_by', { name: byName }, `Spiel von ${byName} beendet.`));
+        endBoss('stopped');
+        return;
+      }
       // Sende game-ended mit Leaderboard (nicht nur game-stopped), damit alle
       // Spieler das finale Ranking sehen — auch bei vorzeitigem Abbruch.
       io.emit('game-ended', {
