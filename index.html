@@ -878,6 +878,8 @@ function connectSocket(name,color){
   socket.on('player-joined',p=>{addRemotePlayer(p);addChatMsg('System','',t('sys.joined',{name:p.name}),true);});
   socket.on('player-left',id=>{entities=entities.filter(e=>e.remoteId!==id);});
   socket.on('player-moved',d=>{const e=entities.find(e2=>e2.remoteId===d.id);if(e){e.x=d.x;e.y=d.y;e.dir=d.dir;e.frame=d.frame;e.moving=d.moving;}});
+  // Server-initiierter Teleport (z.B. Boss-Fight-Start: alle ans Arena-Ende)
+  socket.on('teleport-self',d=>{if(d&&typeof d.x==='number'&&typeof d.y==='number'){player.x=d.x;player.y=d.y;}});
   socket.on('chat',m=>{
     // Server sendet bei System-Messages `code`+`params` für i18n; bei Agent-Messages
     // `texts:{de,en}` mit beiden Sprachen. Fallback ist `text` (DE).
@@ -946,6 +948,21 @@ function connectSocket(name,color){
         // Eigener Spieler ist Teilnehmer wenn in g.players
         const me=g.players&&g.players[myId];
         if(!me){bossState.midJoin=true;}
+        else{
+          // Server teleportiert Teilnehmer ans untere Arena-Ende; Client muss
+          // dieselbe Logik spiegeln, sonst bleibt der Spieler auf seiner alten
+          // Welt-Position außerhalb der Arena hängen (canMove blockt dann jede
+          // Bewegung). Reihenfolge der IDs entspricht Object.keys(g.players),
+          // was identisch zu Array.from(players.keys()) auf dem Server ist
+          // (Insertion-Order garantiert).
+          const ids=Object.keys(g.players);
+          const idx=ids.indexOf(myId);
+          if(idx>=0&&g.arena){
+            const cols=Math.max(1,ids.length);
+            player.x=g.arena.x+40+(idx/Math.max(1,cols-1||1))*(g.arena.w-80);
+            player.y=g.arena.y+g.arena.h-60;
+          }
+        }
         showBossHud();
         // Detail-Info im Standard-HUD: Schwierigkeit + Hinweis
         const hint=('ontouchstart' in window||navigator.maxTouchPoints>0)?t('mg_boss_hint_mobile'):t('mg_boss_hint');

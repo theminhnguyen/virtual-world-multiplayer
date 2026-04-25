@@ -567,6 +567,12 @@ function startGameServer(data) {
         const cols = Math.max(1, participantIds.length);
         pd.x = arena.x + 40 + (idx / Math.max(1, cols-1 || 1)) * (arena.w - 80);
         pd.y = arena.y + arena.h - 60;
+        // Direkt an genau diesen Socket senden — der eigene Client kennt sonst
+        // seine neue Position nicht (er bekommt nur 'player-moved' für andere).
+        // Ohne diesen Push bleibt der Spieler optisch außerhalb der Arena
+        // hängen und kann sich wegen canMove-Block nicht bewegen.
+        const sock = io.sockets.sockets.get(id);
+        if (sock) sock.emit('teleport-self', { x: pd.x, y: pd.y });
       }
     });
     // Tick-Loop starten (20Hz) — wird in endBoss gestoppt
